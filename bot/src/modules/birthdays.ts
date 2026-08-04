@@ -86,9 +86,17 @@ export async function checkBirthdays(client: Client) {
 
         // Only send congratulations message once per year
         if (birthday.lastCelebratedYear !== currentYear) {
-          // Format message
-          const welcomeMsg = (config.birthdayMessage || '🎉 ¡Feliz cumpleaños {user}! Que pases un gran día.')
-            .replace(/{user}/g, `<@${member.id}>`);
+          // Format message - support multiple custom messages (one per line or separated by '|') and select one at random
+          const rawTemplates = (config.birthdayMessage || '🎉 ¡Feliz cumpleaños {user}! Que pases un gran día.')
+            .split(/\r?\n|\|/)
+            .map(m => m.trim())
+            .filter(Boolean);
+
+          const chosenTemplate = rawTemplates.length > 0
+            ? rawTemplates[Math.floor(Math.random() * rawTemplates.length)]
+            : '🎉 ¡Feliz cumpleaños {user}! Que pases un gran día.';
+
+          const welcomeMsg = chosenTemplate.replace(/{user}/g, `<@${member.id}>`);
 
           const embed = new EmbedBuilder()
             .setColor('#a78bfa')

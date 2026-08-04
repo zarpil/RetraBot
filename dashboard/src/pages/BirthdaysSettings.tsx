@@ -83,14 +83,16 @@ export const BirthdaysSettings: React.FC<BirthdaysSettingsProps> = ({
               </div>
 
               <div className="field" style={{ marginTop: 16 }}>
-                <label>Mensaje de felicitación</label>
+                <label>Mensajes de felicitación (Múltiples variantes)</label>
                 <textarea
-                  placeholder=" Feliz cumpleaños {user}! Que pases un gran día."
+                  placeholder={"🎉 ¡Feliz cumpleaños {user}! Que pases un gran día.\n🎂 ¡Hoy es el gran día de {user}! ¡Muchas felicidades! 🥳\n🌟 Un año más para {user}. ¡A celebrarlo!"}
                   value={config.birthdayMessage || ''}
                   onChange={e => setConfig({ ...config, birthdayMessage: e.target.value })}
-                  rows={3}
+                  rows={5}
                 />
-                <span className="hint">Usa <code>{`{user}`}</code> para mencionar al cumpleañero en el mensaje.</span>
+                <span className="hint">
+                  Puedes escribir <strong>varios mensajes (uno por línea)</strong>. RetraBot elegirá uno de ellos de forma <strong>aleatoria</strong> cada vez que felicite a un cumpleañero. Usa <code>{`{user}`}</code> para la mención.
+                </span>
               </div>
 
               <div className="actions" style={{ marginTop: 16 }}>
