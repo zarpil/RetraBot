@@ -9,9 +9,9 @@ services:
     container_name: retrabot_backend
     restart: always
     ports:
-      - "3001:3001"
+      - "48931:48931"
     environment:
-      - PORT=3001
+      - PORT=48931
       - NODE_ENV=production
       - DISCORD_TOKEN=${DISCORD_TOKEN}
       - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID}
@@ -32,7 +32,7 @@ services:
     container_name: retrabot_dashboard
     restart: always
     ports:
-      - "80:80"
+      - "28741:80"
     depends_on:
       - backend
 

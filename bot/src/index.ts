@@ -2729,7 +2729,7 @@ app.delete('/api/guilds/:guildId/clans/:clanId', requireGuildAdmin, async (req, 
   }
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 48931;
 app.listen(PORT, () => {
   console.log(`🌐 Servidor API del Panel funcionando en http://localhost:${PORT}`);
 });

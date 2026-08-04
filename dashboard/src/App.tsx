@@ -36,7 +36,7 @@ import { LeaderboardPage } from './pages/LeaderboardPage';
 import { ClansPage } from './pages/ClansPage';
 import { CasinoPage } from './pages/CasinoPage';
 
-const API_BASE = 'http://localhost:3001';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:48931';
 
 // Mocks por defecto para modo offline/demo
 const MOCK_STATS: ServerStats = {
