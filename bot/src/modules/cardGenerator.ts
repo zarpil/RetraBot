@@ -39,6 +39,16 @@ export async function generateRankCard(options: RankCardOptions): Promise<Buffer
   const canvas = createCanvas(width, height);
   const ctx = canvas.getContext('2d');
 
+  const textLevel = Math.max(0, options.textLevel ?? 0);
+  const textXp = Math.max(0, options.textXp ?? 0);
+  const voiceLevel = Math.max(0, options.voiceLevel ?? 0);
+  const voiceXp = Math.max(0, options.voiceXp ?? 0);
+  const prestige = Math.max(0, options.prestige ?? 0);
+  const messageCount = Math.max(0, options.messageCount ?? 0);
+  const vcSeconds = Math.max(0, options.vcSeconds ?? 0);
+  const username = options.username || 'Usuario';
+  const displayName = options.displayName || username;
+
   // Background gradient / card container
   const bgGradient = ctx.createLinearGradient(0, 0, width, height);
   bgGradient.addColorStop(0, '#111319');
@@ -67,23 +77,30 @@ export async function generateRankCard(options: RankCardOptions): Promise<Buffer
   const avatarX = 85;
   const avatarY = 95;
 
-  try {
-    const avatarImage = await getCachedImage(options.avatarUrl);
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(avatarX, avatarY, avatarRadius, 0, Math.PI * 2, true);
-    ctx.closePath();
-    ctx.clip();
-    ctx.drawImage(avatarImage, avatarX - avatarRadius, avatarY - avatarRadius, avatarRadius * 2, avatarRadius * 2);
-    ctx.restore();
+  if (options.avatarUrl) {
+    try {
+      const avatarImage = await getCachedImage(options.avatarUrl);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(avatarX, avatarY, avatarRadius, 0, Math.PI * 2, true);
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(avatarImage, avatarX - avatarRadius, avatarY - avatarRadius, avatarRadius * 2, avatarRadius * 2);
+      ctx.restore();
 
-    // Avatar Outer Ring
-    ctx.strokeStyle = '#5865f2';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(avatarX, avatarY, avatarRadius + 2, 0, Math.PI * 2, true);
-    ctx.stroke();
-  } catch (e) {
+      // Avatar Outer Ring
+      ctx.strokeStyle = '#5865f2';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(avatarX, avatarY, avatarRadius + 2, 0, Math.PI * 2, true);
+      ctx.stroke();
+    } catch (e) {
+      ctx.fillStyle = '#5865f2';
+      ctx.beginPath();
+      ctx.arc(avatarX, avatarY, avatarRadius, 0, Math.PI * 2, true);
+      ctx.fill();
+    }
+  } else {
     ctx.fillStyle = '#5865f2';
     ctx.beginPath();
     ctx.arc(avatarX, avatarY, avatarRadius, 0, Math.PI * 2, true);
@@ -93,11 +110,11 @@ export async function generateRankCard(options: RankCardOptions): Promise<Buffer
   // Display Name & Username
   ctx.font = 'bold 26px sans-serif';
   ctx.fillStyle = '#ffffff';
-  ctx.fillText(options.displayName, 175, 65);
+  ctx.fillText(displayName, 175, 65);
 
   ctx.font = '500 16px sans-serif';
   ctx.fillStyle = '#8e98b0';
-  ctx.fillText(`@${options.username}`, 175, 90);
+  ctx.fillText(`@${username}`, 175, 90);
 
   // Rank Position Badge (#Rank) & Prestige Badge
   let rightOffset = 40;
@@ -123,8 +140,8 @@ export async function generateRankCard(options: RankCardOptions): Promise<Buffer
     rightOffset += rankWidth + 35;
   }
 
-  if (options.prestige > 0) {
-    const badgeText = `PRESTIGIO ${options.prestige}`;
+  if (prestige > 0) {
+    const badgeText = `PRESTIGIO ${prestige}`;
     ctx.font = 'bold 13px sans-serif';
     const textWidth = ctx.measureText(badgeText).width;
     const badgeX = width - textWidth - rightOffset;
@@ -145,7 +162,7 @@ export async function generateRankCard(options: RankCardOptions): Promise<Buffer
   // Helper for drawing progress bars
   const drawProgressBar = (
     label: string,
-    level: number,
+    lvl: number,
     currentXp: number,
     requiredXp: number,
     yPos: number,
@@ -156,17 +173,19 @@ export async function generateRankCard(options: RankCardOptions): Promise<Buffer
     const barW = width - barX - 35;
     const barH = 18;
 
-    const percentage = Math.min(100, Math.max(0, Math.floor((currentXp / requiredXp) * 100)));
+    const curXp = Math.max(0, currentXp ?? 0);
+    const reqXp = Math.max(1, requiredXp ?? 100);
+    const percentage = Math.min(100, Math.max(0, Math.floor((curXp / reqXp) * 100)));
 
     // Label & Level
     ctx.font = 'bold 14px sans-serif';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(`${label}  Nivel ${level}`, barX, yPos - 8);
+    ctx.fillText(`${label}  Nivel ${lvl}`, barX, yPos - 8);
 
     // XP Numbers
     ctx.font = '500 13px sans-serif';
     ctx.fillStyle = '#a0aec0';
-    const xpText = `${currentXp.toLocaleString()} / ${requiredXp.toLocaleString()} XP (${percentage}%)`;
+    const xpText = `${curXp.toLocaleString()} / ${reqXp.toLocaleString()} XP (${percentage}%)`;
     const xpTextWidth = ctx.measureText(xpText).width;
     ctx.fillText(xpText, barX + barW - xpTextWidth, yPos - 8);
 
@@ -190,16 +209,16 @@ export async function generateRankCard(options: RankCardOptions): Promise<Buffer
   };
 
   // 1. Text XP Bar
-  const reqTextXp = xpForLevel(options.textLevel);
-  drawProgressBar('TEXTO', options.textLevel, options.textXp, reqTextXp, 130, '#4f9eff', '#6366f1');
+  const reqTextXp = xpForLevel(textLevel);
+  drawProgressBar('TEXTO', textLevel, textXp, reqTextXp, 130, '#4f9eff', '#6366f1');
 
   // 2. Voice XP Bar
-  const reqVoiceXp = xpForLevel(options.voiceLevel);
-  drawProgressBar('VOZ', options.voiceLevel, options.voiceXp, reqVoiceXp, 195, '#a78bfa', '#ec4899');
+  const reqVoiceXp = xpForLevel(voiceLevel);
+  drawProgressBar('VOZ', voiceLevel, voiceXp, reqVoiceXp, 195, '#a78bfa', '#ec4899');
 
   // Bottom Stats Footer Line
-  const vcHours = (options.vcSeconds / 3600).toFixed(1);
-  const footerText = `${options.messageCount.toLocaleString()} mensajes  •  ${vcHours} hrs en voz`;
+  const vcHours = (vcSeconds / 3600).toFixed(1);
+  const footerText = `${messageCount.toLocaleString()} mensajes  •  ${vcHours} hrs en voz`;
   ctx.font = '500 13px sans-serif';
   ctx.fillStyle = '#718096';
   ctx.fillText(footerText, 175, 248);

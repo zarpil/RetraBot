@@ -59,14 +59,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
         <div className="nav-label">Módulos</div>
 
         {([
-          ['dashboard',   'Inicio / Resumen',     <Crown size={14} />],
-          ['clans',       'Clanes',               <Shield size={14} />],
-          ['leveling',    'Niveles',              <TrendingUp size={14} />],
-          ['tempvc',      'Canales de Voz',       <Volume2 size={14} />],
-          ['casino',      'Casino & Economía',     <Coins size={14} />],
-          ['leaderboard', 'Clasificación',        <Users size={14} />],
-          ['birthdays',   'Cumpleaños',            <Cake size={14} />],
-          ['general',     'Ajustes Generales',    <Settings size={14} />],
+          ['dashboard', 'Inicio / Resumen', <Crown size={14} />],
+          ['general', 'Ajustes Generales', <Settings size={14} />],
+          ['clans', 'Clanes', <Shield size={14} />],
+          ['leveling', 'Niveles', <TrendingUp size={14} />],
+          ['tempvc', 'Canales de Voz', <Volume2 size={14} />],
+          ['casino', 'Casino & Economía', <Coins size={14} />],
+          ['leaderboard', 'Clasificación', <Users size={14} />],
+          ['birthdays', 'Cumpleaños', <Cake size={14} />],
         ] as [Tab, string, React.ReactNode][]).map(([id, label, icon]) => (
           <div
             key={id}

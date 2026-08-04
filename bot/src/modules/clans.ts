@@ -701,7 +701,7 @@ export async function handleClanInteraction(interaction: any) {
   if (!interaction.guild) return;
 
   const { customId, guild, member, user } = interaction;
-  if (!customId.startsWith('clan_')) return;
+  if (!customId || typeof customId !== 'string' || !customId.startsWith('clan_')) return;
 
   const parts = customId.split('_'); // e.g. ['clan', 'addmember', clanId, ownerId]
   const action = parts[1];

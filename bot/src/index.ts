@@ -578,54 +578,64 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
 
     if (commandName === 'rank') {
-      const targetUser = interaction.options.getUser('usuario') || user;
-      const targetId = `${guildId}-${targetUser.id}`;
+      try {
+        const targetUser = interaction.options.getUser('usuario') || user;
+        const targetId = `${guildId}-${targetUser.id}`;
 
-      const userXP = await prisma.userXP.findUnique({
-        where: { id: targetId },
-      });
+        let userXP = await prisma.userXP.findUnique({
+          where: { id: targetId },
+        });
 
-      if (!userXP) {
-        return interaction.reply({ content: `❌ **${targetUser.username}** no tiene registro de actividad aún.`, ephemeral: true });
-      }
-
-      await interaction.deferReply();
-
-      // Calculate rank position in server
-      const higherCount = await prisma.userXP.count({
-        where: {
-          guildId,
-          OR: [
-            { textLevel: { gt: userXP.textLevel } },
-            { textLevel: userXP.textLevel, textXp: { gt: userXP.textXp } }
-          ]
+        if (!userXP) {
+          return interaction.reply({ content: `❌ **${targetUser.username}** no tiene registro de actividad aún.`, ephemeral: true });
         }
-      });
-      const rankPosition = higherCount + 1;
 
-      const memberObj = await interaction.guild?.members.fetch(targetUser.id).catch(() => null);
-      const displayName = memberObj?.displayName || targetUser.username;
-      const avatarUrl = targetUser.displayAvatarURL({ extension: 'png', size: 256 });
+        await interaction.deferReply();
 
-      const imageBuffer = await generateRankCard({
-        username: targetUser.username,
-        displayName,
-        avatarUrl,
-        rankPosition,
-        textLevel: userXP.textLevel,
-        textXp: userXP.textXp,
-        voiceLevel: userXP.voiceLevel,
-        voiceXp: userXP.voiceXp,
-        prestige: userXP.prestige || 0,
-        messageCount: userXP.messageCount,
-        vcSeconds: userXP.vcSeconds,
-      });
+        // Calculate rank position in server
+        const higherCount = await prisma.userXP.count({
+          where: {
+            guildId,
+            OR: [
+              { textLevel: { gt: userXP.textLevel ?? 0 } },
+              { textLevel: userXP.textLevel ?? 0, textXp: { gt: userXP.textXp ?? 0 } }
+            ]
+          }
+        });
+        const rankPosition = higherCount + 1;
 
-      const attachment = new AttachmentBuilder(imageBuffer, { name: `rank-${targetUser.id}.png` });
+        const memberObj = await interaction.guild?.members.fetch(targetUser.id).catch(() => null);
+        const displayName = memberObj?.displayName || (targetUser as any).displayName || targetUser.username;
+        const avatarUrl = targetUser.displayAvatarURL({ extension: 'png', size: 256 });
 
-      return interaction.editReply({
-        files: [attachment],
-      });
+        const imageBuffer = await generateRankCard({
+          username: targetUser.username,
+          displayName,
+          avatarUrl,
+          rankPosition,
+          textLevel: userXP.textLevel ?? 0,
+          textXp: userXP.textXp ?? 0,
+          voiceLevel: userXP.voiceLevel ?? 0,
+          voiceXp: userXP.voiceXp ?? 0,
+          prestige: userXP.prestige ?? 0,
+          messageCount: userXP.messageCount ?? 0,
+          vcSeconds: userXP.vcSeconds ?? 0,
+        });
+
+        const attachment = new AttachmentBuilder(imageBuffer, { name: `rank-${targetUser.id}.png` });
+
+        return interaction.editReply({
+          files: [attachment],
+        });
+      } catch (err: any) {
+        console.error('[Slash /rank Error]:', err);
+        const errorMsg = '❌ Ocurrió un error al generar la tarjeta de rango.';
+        if (interaction.deferred || interaction.replied) {
+          return interaction.editReply({ content: errorMsg });
+        } else {
+          return interaction.reply({ content: errorMsg, ephemeral: true });
+        }
+      }
     }
 
     if (commandName === 'leaderboard') {
@@ -1221,6 +1231,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
 
 // Express API Server Setup
 const app = express();
+app.set('trust proxy', 1);
 
 // ─────────────────────────────────────────────────────────────────────────SECURITY: CORS 
 const ALLOWED_ORIGINS: string[] = [
