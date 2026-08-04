@@ -35,12 +35,10 @@ COPY package*.json ./
 COPY shared/package*.json ./shared/
 COPY bot/package*.json ./bot/
 
-RUN npm ci --only=production
-
 COPY --from=builder /app/shared ./shared
 COPY --from=builder /app/bot/dist ./bot/dist
 COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE 48931
 
-CMD ["node", "bot/dist/index.js"]
+CMD ["sh", "-c", "npx prisma db push --schema=./shared/prisma/schema.prisma && node bot/dist/index.js"]
