@@ -1,7 +1,8 @@
 # Dockerfile para el Backend (Bot de Discord + Express API)
 FROM node:20-alpine AS builder
 
-RUN apk add --no-cache openssl
+# Instalar openssl, fontconfig y fuentes tipográficas para soporte de Canvas en Alpine Linux
+RUN apk add --no-cache openssl fontconfig font-dejavu ttf-dejavu
 
 WORKDIR /app
 
@@ -25,7 +26,8 @@ RUN npm run build --workspace=bot
 # Imagen final de producción
 FROM node:20-alpine AS runner
 
-RUN apk add --no-cache openssl
+# Instalar openssl, fontconfig y fuentes tipográficas en la imagen final
+RUN apk add --no-cache openssl fontconfig font-dejavu ttf-dejavu
 
 WORKDIR /app
 
