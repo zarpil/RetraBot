@@ -38,3 +38,4 @@ services:
 
 volumes:
   bot_data:
+    name: retrabot_db_data
