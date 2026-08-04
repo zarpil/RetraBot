@@ -15,8 +15,9 @@ RUN npm ci
 COPY shared ./shared
 COPY bot ./bot
 
-# Generar Prisma Client y compilar TypeScript
+# Generar Prisma Client y compilar shared y bot
 RUN npx prisma generate --schema=./shared/prisma/schema.prisma
+RUN npm run build --workspace=shared
 RUN npm run build --workspace=bot
 
 # Imagen final de producción
@@ -36,6 +37,6 @@ COPY --from=builder /app/shared ./shared
 COPY --from=builder /app/bot/dist ./bot/dist
 COPY --from=builder /app/node_modules ./node_modules
 
-EXPOSE 3001
+EXPOSE 48931
 
 CMD ["node", "bot/dist/index.js"]

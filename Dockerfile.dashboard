@@ -4,11 +4,17 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 COPY package*.json ./
+COPY shared/package*.json ./shared/
 COPY dashboard/package*.json ./dashboard/
+COPY shared/prisma ./shared/prisma
 
 RUN npm ci
 
+COPY shared ./shared
 COPY dashboard ./dashboard
+
+RUN npx prisma generate --schema=./shared/prisma/schema.prisma
+RUN npm run build --workspace=shared
 
 # Argumento para pasar la URL de la API en build time
 ARG VITE_API_URL
