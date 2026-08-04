@@ -47,8 +47,8 @@ interface CasinoPageProps {
   setNewIncomeHours: (hours: number) => void;
   newIncomeIsSeasonal: boolean;
   setNewIncomeIsSeasonal: (isSeasonal: boolean) => void;
-  seasonalEdits: Record<string, { name: string; color: string }>;
-  setSeasonalEdits: React.Dispatch<React.SetStateAction<Record<string, { name: string; color: string }>>>;
+  seasonalEdits: Record<string, { name: string; color: string; icon?: string; price?: number; description?: string; incomeAmount?: number }>;
+  setSeasonalEdits: React.Dispatch<React.SetStateAction<Record<string, { name: string; color: string; icon?: string; price?: number; description?: string; incomeAmount?: number }>>>;
   resetConfirmed: boolean;
   setResetConfirmed: (confirmed: boolean) => void;
 }
@@ -959,14 +959,14 @@ export const CasinoPage: React.FC<CasinoPageProps> = ({
                               </span>
                               {matchedIncome && (
                                 <span className="badge" style={{ fontSize: 10, padding: '2px 6px', background: 'rgba(46, 204, 113, 0.15)', color: '#2ecc71', borderRadius: 4 }}>
-                                   Pasivo: +{matchedIncome.incomeAmount.toLocaleString()} {config.currencySymbol || ''} / {matchedIncome.intervalHours || 3}h
+                                   Pasivo: +{(matchedIncome.incomeAmount ?? 0).toLocaleString()} {config.currencySymbol || ''} / {matchedIncome.intervalHours || 3}h
                                 </span>
                               )}
                             </div>
                             {sr.description && <div style={{ fontSize: 12, color: 'var(--txt-2)', marginTop: 4 }}>{sr.description}</div>}
                           </div>
                           <div className="income-role-payout" style={{ color: '#f1c40f' }}>
-                            {sr.price.toLocaleString()} {config.currencySymbol || ''}
+                            {(sr.price ?? 0).toLocaleString()} {config.currencySymbol || ''}
                           </div>
                           <button type="button" className="btn btn-danger btn-sm" onClick={() => handleDeleteShopRole(sr.id)}>
                             <Trash2 size={13} />
@@ -1076,7 +1076,7 @@ export const CasinoPage: React.FC<CasinoPageProps> = ({
                             {item.description && <div style={{ fontSize: 12, color: 'var(--txt-2)', marginTop: 4 }}>{item.description}</div>}
                           </div>
                           <div className="income-role-payout" style={{ color: '#f1c40f' }}>
-                            {item.price.toLocaleString()} {config.currencySymbol || ''}
+                            {(item.price ?? 0).toLocaleString()} {config.currencySymbol || ''}
                           </div>
                           {!isRetired && (
                             <button type="button" className="btn btn-danger btn-sm" title="Retirar de la Tienda (Mantener en mochilas compradas)" onClick={() => handleDeleteShopItem(item.id)}>
@@ -1174,7 +1174,7 @@ export const CasinoPage: React.FC<CasinoPageProps> = ({
                         </span>
                       </div>
                       <div className="income-role-payout">
-                        +{ri.incomeAmount.toLocaleString()} {config.currencySymbol || ''} <span className="income-role-sub">/ cada {ri.intervalHours || 3}h</span>
+                        +{(ri.incomeAmount ?? 0).toLocaleString()} {config.currencySymbol || ''} <span className="income-role-sub">/ cada {ri.intervalHours || 3}h</span>
                       </div>
                       <button type="button" className="btn btn-danger btn-sm" onClick={() => handleDeleteRoleIncome(ri.id)}>
                         <Trash2 size={13} />
@@ -1292,7 +1292,22 @@ export const CasinoPage: React.FC<CasinoPageProps> = ({
                       const isShop = shopRoleIds.includes(rId);
                       const isIncome = incomeRoleIds.includes(rId);
 
-                      const editState = seasonalEdits[rId] || { name: roleName, color: currentHex };
+                      const matchedShopRole = (config.shopRoles || []).find(sr => sr.roleId === rId);
+                      const matchedIncomeRole = (config.roleIncomes || []).find(ri => ri.roleId === rId);
+
+                      const defaultIcon = matchedShopRole?.icon || '🛒';
+                      const defaultPrice = matchedShopRole?.price ?? 10000;
+                      const defaultDesc = matchedShopRole?.description || '';
+                      const defaultIncome = matchedIncomeRole?.incomeAmount ?? 5000;
+
+                      const editState = seasonalEdits[rId] || {
+                        name: roleName,
+                        color: currentHex,
+                        icon: defaultIcon,
+                        price: defaultPrice,
+                        description: defaultDesc,
+                        incomeAmount: defaultIncome
+                      };
 
                       return (
                         <div
@@ -1304,7 +1319,7 @@ export const CasinoPage: React.FC<CasinoPageProps> = ({
                             padding: 16,
                           }}
                         >
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, alignItems: 'center' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, alignItems: 'center' }}>
                             {/* Información Actual */}
                             <div>
                               <div style={{ fontSize: 11, textTransform: 'uppercase', fontWeight: 700, color: 'var(--txt-3)', marginBottom: 4 }}>
@@ -1314,7 +1329,9 @@ export const CasinoPage: React.FC<CasinoPageProps> = ({
                                 <div style={{ width: 14, height: 14, borderRadius: '50%', background: editState.color }} />
                                 <div>
                                   <div style={{ fontWeight: 700, fontSize: 15, color: '#ffffff', display: 'flex', alignItems: 'center', gap: 8, marginTop: 1 }}>
-                                    {roleName}
+                                    {editState.icon || '🛒'} {roleName}
+                                  </div>
+                                  <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
                                     {isShop && <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 12, background: 'rgba(241, 196, 15, 0.18)', color: '#f1c40f', border: '1px solid rgba(241, 196, 15, 0.3)', fontWeight: 700 }}> Tienda</span>}
                                     {isIncome && <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 12, background: 'rgba(88, 101, 242, 0.18)', color: '#5865f2', border: '1px solid rgba(88, 101, 242, 0.3)', fontWeight: 700 }}> Sueldo Ingreso</span>}
                                   </div>
@@ -1325,7 +1342,7 @@ export const CasinoPage: React.FC<CasinoPageProps> = ({
                             {/* Input para Nuevo Nombre */}
                             <div>
                               <label style={{ fontSize: 11, color: 'var(--txt-2)', fontWeight: 600, display: 'block', marginBottom: 6 }}>
-                                 Nuevo Nombre para la Temporada:
+                                 Nuevo Nombre:
                               </label>
                               <input
                                 type="text"
@@ -1334,7 +1351,7 @@ export const CasinoPage: React.FC<CasinoPageProps> = ({
                                   const val = e.target.value;
                                   setSeasonalEdits(prev => ({
                                     ...prev,
-                                    [rId]: { ...(prev[rId] || { name: roleName, color: currentHex }), name: val }
+                                    [rId]: { ...(prev[rId] || editState), name: val }
                                   }));
                                 }}
                                 style={{
@@ -1353,9 +1370,9 @@ export const CasinoPage: React.FC<CasinoPageProps> = ({
                             {/* Color Picker & Quick Preset Swatches */}
                             <div>
                               <label style={{ fontSize: 11, color: 'var(--txt-2)', fontWeight: 600, display: 'block', marginBottom: 6 }}>
-                                 Color del Rol (Selecciona o elige Preset):
+                                 Color del Rol:
                               </label>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#111215', padding: '3px 8px', borderRadius: 8, border: '1px solid var(--border)' }}>
                                   <input
                                     type="color"
@@ -1364,7 +1381,7 @@ export const CasinoPage: React.FC<CasinoPageProps> = ({
                                       const val = e.target.value;
                                       setSeasonalEdits(prev => ({
                                         ...prev,
-                                        [rId]: { ...(prev[rId] || { name: roleName, color: currentHex }), color: val }
+                                        [rId]: { ...(prev[rId] || editState), color: val }
                                       }));
                                     }}
                                     style={{ width: 28, height: 28, border: 'none', background: 'transparent', cursor: 'pointer', padding: 0 }}
@@ -1379,7 +1396,7 @@ export const CasinoPage: React.FC<CasinoPageProps> = ({
                                       onClick={() => {
                                         setSeasonalEdits(prev => ({
                                           ...prev,
-                                          [rId]: { ...(prev[rId] || { name: roleName, color: currentHex }), color: c }
+                                          [rId]: { ...(prev[rId] || editState), color: c }
                                         }));
                                       }}
                                       style={{
@@ -1397,6 +1414,128 @@ export const CasinoPage: React.FC<CasinoPageProps> = ({
                                 </div>
                               </div>
                             </div>
+
+                            {/* Propiedades de Tienda (Ícono, Precio, Descripción) */}
+                            {isShop && (
+                              <>
+                                <div>
+                                  <label style={{ fontSize: 11, color: 'var(--txt-2)', fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                                     Emoji / Ícono:
+                                  </label>
+                                  <input
+                                    type="text"
+                                    placeholder="👑, 🛒, 💎"
+                                    value={editState.icon ?? defaultIcon}
+                                    onChange={e => {
+                                      const val = e.target.value;
+                                      setSeasonalEdits(prev => ({
+                                        ...prev,
+                                        [rId]: { ...(prev[rId] || editState), icon: val }
+                                      }));
+                                    }}
+                                    style={{
+                                      width: '100%',
+                                      background: '#111215',
+                                      border: '1px solid var(--border)',
+                                      borderRadius: 8,
+                                      color: '#fff',
+                                      padding: '8px 12px',
+                                      fontSize: 13,
+                                      fontWeight: 600
+                                    }}
+                                  />
+                                </div>
+
+                                <div>
+                                  <label style={{ fontSize: 11, color: 'var(--txt-2)', fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                                     Precio Tienda ({config.currencySymbol || ''}):
+                                  </label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step={1000}
+                                    value={editState.price ?? defaultPrice}
+                                    onChange={e => {
+                                      const val = +e.target.value;
+                                      setSeasonalEdits(prev => ({
+                                        ...prev,
+                                        [rId]: { ...(prev[rId] || editState), price: val }
+                                      }));
+                                    }}
+                                    style={{
+                                      width: '100%',
+                                      background: '#111215',
+                                      border: '1px solid var(--border)',
+                                      borderRadius: 8,
+                                      color: '#fff',
+                                      padding: '8px 12px',
+                                      fontSize: 13,
+                                      fontWeight: 600
+                                    }}
+                                  />
+                                </div>
+
+                                <div style={{ gridColumn: 'span 2' }}>
+                                  <label style={{ fontSize: 11, color: 'var(--txt-2)', fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                                     Descripción para la Tienda:
+                                  </label>
+                                  <input
+                                    type="text"
+                                    placeholder="Descripción corta del rol..."
+                                    value={editState.description ?? defaultDesc}
+                                    onChange={e => {
+                                      const val = e.target.value;
+                                      setSeasonalEdits(prev => ({
+                                        ...prev,
+                                        [rId]: { ...(prev[rId] || editState), description: val }
+                                      }));
+                                    }}
+                                    style={{
+                                      width: '100%',
+                                      background: '#111215',
+                                      border: '1px solid var(--border)',
+                                      borderRadius: 8,
+                                      color: '#fff',
+                                      padding: '8px 12px',
+                                      fontSize: 13,
+                                      fontWeight: 600
+                                    }}
+                                  />
+                                </div>
+                              </>
+                            )}
+
+                            {/* Propiedad de Sueldo Pasivo */}
+                            {isIncome && (
+                              <div>
+                                <label style={{ fontSize: 11, color: 'var(--txt-2)', fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                                   Sueldo Pasivo ({config.currencySymbol || ''}):
+                                </label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step={1000}
+                                  value={editState.incomeAmount ?? defaultIncome}
+                                  onChange={e => {
+                                    const val = +e.target.value;
+                                    setSeasonalEdits(prev => ({
+                                      ...prev,
+                                      [rId]: { ...(prev[rId] || editState), incomeAmount: val }
+                                    }));
+                                  }}
+                                  style={{
+                                    width: '100%',
+                                    background: '#111215',
+                                    border: '1px solid var(--border)',
+                                    borderRadius: 8,
+                                    color: '#fff',
+                                    padding: '8px 12px',
+                                    fontSize: 13,
+                                    fontWeight: 600
+                                  }}
+                                />
+                              </div>
+                            )}
                           </div>
                         </div>
                       );

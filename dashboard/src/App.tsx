@@ -146,7 +146,7 @@ export default function App() {
 
   // Economía Ranking & Prestigio
   const [economyLb, setEconomyLb] = useState<{ userId: string; cash: number; bank: number; total: number; displayName?: string; avatar?: string }[]>([]);
-  const [seasonalEdits, setSeasonalEdits] = useState<Record<string, { name: string; color: string }>>({});
+  const [seasonalEdits, setSeasonalEdits] = useState<Record<string, { name: string; color: string; icon?: string; price?: number; description?: string; incomeAmount?: number }>>({});
   const [resetConfirmed, setResetConfirmed] = useState(false);
 
   // Leveling roles state

@@ -1907,16 +1907,21 @@ app.post('/api/guilds/:guildId/level-roles', requireGuildAdmin, async (req, res)
   res.json({ success: true, levelRole });
 });
 
-app.delete('/api/guilds/:guildId/level-roles/:type/:level', requireGuildAdmin, async (req, res) => {
-  const { guildId, type, level } = req.params;
+app.delete(['/api/guilds/:guildId/level-roles', '/api/guilds/:guildId/level-roles/:type/:level'], requireGuildAdmin, async (req, res) => {
+  const { guildId } = req.params;
+  const targetType = req.params.type || req.body?.type;
+  const targetLevel = req.params.level || req.body?.level;
+  const targetRoleId = req.body?.roleId;
+
   if (!isValidSnowflake(guildId)) return res.status(400).json({ error: 'guildId inválido.' });
-  const roleType = type === 'VOICE' ? 'VOICE' : 'TEXT';
+  const roleType = targetType === 'VOICE' ? 'VOICE' : 'TEXT';
 
   await prisma.levelRole.deleteMany({
     where: {
       guildId,
       type: roleType,
-      level: parseInt(level, 10),
+      ...(targetLevel !== undefined && { level: parseInt(targetLevel, 10) }),
+      ...(targetRoleId && { roleId: targetRoleId }),
     },
   });
 
@@ -2107,15 +2112,37 @@ app.delete(['/api/guilds/:guildId/shop-items/:id', '/api/guilds/:guildId/economy
 app.post(['/api/guilds/:guildId/season-reset', '/api/guilds/:guildId/economy/season-reset', '/api/guilds/:guildId/economy/reset-season'], requireGuildAdmin, async (req, res) => {
   const { guildId } = req.params;
   if (!isValidSnowflake(guildId)) return res.status(400).json({ error: 'guildId inválido.' });
-  const { roleUpdates } = req.body || {};
+  const { roleUpdates, roleEdits } = req.body || {};
 
   try {
     const guild = client.guilds.cache.get(guildId);
 
-    // 1. Rename & Recolor seasonal roles if provided
-    if (guild && Array.isArray(roleUpdates)) {
-      for (const update of roleUpdates) {
-        if (!update.roleId) continue;
+    // Normalize updates list from either roleUpdates (Array) or roleEdits (Record)
+    const updatesList: Array<{
+      roleId: string;
+      name?: string;
+      color?: string;
+      icon?: string;
+      price?: number;
+      description?: string;
+      incomeAmount?: number;
+    }> = [];
+
+    if (Array.isArray(roleUpdates)) {
+      updatesList.push(...roleUpdates);
+    } else if (roleEdits && typeof roleEdits === 'object') {
+      for (const [rId, val] of Object.entries(roleEdits)) {
+        if (val && typeof val === 'object') {
+          updatesList.push({ roleId: rId, ...(val as any) });
+        }
+      }
+    }
+
+    // 1. Rename & Recolor seasonal roles in Discord & Update DB properties (Icon, Price, Description, Income)
+    for (const update of updatesList) {
+      if (!update.roleId) continue;
+
+      if (guild) {
         const role = guild.roles.cache.get(update.roleId);
         if (role) {
           const editData: { name?: string; color?: any } = {};
@@ -2125,6 +2152,28 @@ app.post(['/api/guilds/:guildId/season-reset', '/api/guilds/:guildId/economy/sea
             await role.edit(editData).catch(() => null);
           }
         }
+      }
+
+      // Update ShopRole properties if specified
+      if (update.icon !== undefined || update.price !== undefined || update.description !== undefined) {
+        await prisma.shopRole.updateMany({
+          where: { guildId, roleId: update.roleId },
+          data: {
+            ...(update.icon && { icon: update.icon.trim() }),
+            ...(typeof update.price === 'number' && update.price >= 0 && { price: update.price }),
+            ...(update.description !== undefined && { description: update.description.trim() }),
+          },
+        });
+      }
+
+      // Update RoleIncome properties if specified
+      if (update.incomeAmount !== undefined) {
+        await prisma.roleIncome.updateMany({
+          where: { guildId, roleId: update.roleId },
+          data: {
+            ...(typeof update.incomeAmount === 'number' && update.incomeAmount >= 0 && { incomeAmount: update.incomeAmount }),
+          },
+        });
       }
     }
 
