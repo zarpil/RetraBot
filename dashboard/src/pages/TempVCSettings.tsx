@@ -80,7 +80,7 @@ export const TempVCSettings: React.FC<TempVCSettingsProps> = ({
                 )}
                 <span className="hint">
                   Si tu servidor usa un rol de acceso en vez de @everyone, selecciónalo
-                  aquí para que  Bloquear y  Ocultar funcionen correctamente.
+                  aquí para que el bloqueo del canal funcione correctamente.
                 </span>
               </div>
 
@@ -124,7 +124,6 @@ export const TempVCSettings: React.FC<TempVCSettingsProps> = ({
                     <div className="discord-field-name"> Estado</div>
                     <div className="discord-field-value">
                        Desbloqueado<br />
-                       Visible<br />
                        Sin límite
                     </div>
                   </div>
@@ -132,8 +131,8 @@ export const TempVCSettings: React.FC<TempVCSettingsProps> = ({
                     <div className="discord-field-name">️ Controles</div>
                     <div className="discord-field-value">
                        Bloquear / Desbloquear<br />
-                       Ocultar / Mostrar<br />
-                       Renombrar
+                       Renombrar<br />
+                       Límite
                     </div>
                   </div>
                 </div>
@@ -142,7 +141,6 @@ export const TempVCSettings: React.FC<TempVCSettingsProps> = ({
               <div className="discord-buttons">
                 <button type="button" className="discord-btn danger"><Lock size={12} /> Bloquear</button>
                 <button type="button" className="discord-btn grey" style={{ opacity: 0.45 }}><Unlock size={12} /> Desbloquear</button>
-                <button type="button" className="discord-btn grey"> Ocultar</button>
                 <button type="button" className="discord-btn primary"><Edit2 size={12} /> Renombrar</button>
               </div>
               <div className="discord-buttons" style={{ marginTop: 4 }}>

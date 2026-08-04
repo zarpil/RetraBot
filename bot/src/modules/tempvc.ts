@@ -60,8 +60,6 @@ function buildPanelEmbed(owner: GuildMember, voiceChannel: VoiceChannel, verifie
   const targetOverwrite = voiceChannel.permissionOverwrites.cache.get(targetRoleId);
 
   const isLocked = targetOverwrite?.deny.has(PermissionFlagsBits.Connect) ?? false;
-  // If explicitly denied OR not explicitly allowed, treat as hidden for role-based setups
-  const isHidden = targetOverwrite ? (!targetOverwrite.allow.has(PermissionFlagsBits.ViewChannel) || targetOverwrite.deny.has(PermissionFlagsBits.ViewChannel)) : false;
   const userLimit = voiceChannel.userLimit;
 
   return new EmbedBuilder()
@@ -76,7 +74,6 @@ function buildPanelEmbed(owner: GuildMember, voiceChannel: VoiceChannel, verifie
         name: '📊 Estado',
         value: [
           `${isLocked ? '🔒 Bloqueado' : '🔓 Desbloqueado'}`,
-          `${isHidden ? '🙈 Oculto' : '👁️ Visible'}`,
           `👥 Límite: ${userLimit === 0 ? 'Ilimitado' : `${voiceChannel.members.size}/${userLimit}`}`,
         ].join('\n'),
         inline: true,
@@ -85,7 +82,6 @@ function buildPanelEmbed(owner: GuildMember, voiceChannel: VoiceChannel, verifie
         name: '📋 Controles disponibles',
         value: [
           '🔒 **Bloquear / Desbloquear** — Permite/Evita entradas',
-          '👁️ **Ocultar / Mostrar** — Alterna visibilidad',
           '✏️ **Renombrar** — Cambia el nombre del canal',
           '👥 **Límite** — Cambia el máx. de usuarios',
           '👤 **Expulsar** — Echa a un usuario y lo veta',
@@ -103,18 +99,13 @@ function buildPanelEmbed(owner: GuildMember, voiceChannel: VoiceChannel, verifie
 /**
  * Builds the control panel action rows (buttons).
  */
-function buildPanelComponents(isLocked: boolean, isHidden: boolean): ActionRowBuilder<ButtonBuilder>[] {
+function buildPanelComponents(isLocked: boolean): ActionRowBuilder<ButtonBuilder>[] {
   const row1 = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId('tempvc_toggle_lock')
       .setLabel(isLocked ? 'Desbloquear' : 'Bloquear')
       .setStyle(isLocked ? ButtonStyle.Success : ButtonStyle.Danger)
       .setEmoji(isLocked ? '🔓' : '🔒'),
-    new ButtonBuilder()
-      .setCustomId('tempvc_toggle_visibility')
-      .setLabel(isHidden ? 'Mostrar' : 'Ocultar')
-      .setStyle(ButtonStyle.Secondary)
-      .setEmoji(isHidden ? '👁️' : '🙈'),
     new ButtonBuilder()
       .setCustomId('tempvc_rename')
       .setLabel('Renombrar')
@@ -154,7 +145,7 @@ function buildPanelComponents(isLocked: boolean, isHidden: boolean): ActionRowBu
 async function sendControlPanel(channel: VoiceChannel, owner: GuildMember): Promise<void> {
   const config = await prisma.guildConfig.findUnique({ where: { guildId: channel.guild.id } });
   const embed = buildPanelEmbed(owner, channel, config?.verifiedRoleId);
-  const components = buildPanelComponents(false, false);
+  const components = buildPanelComponents(false);
   await channel.send({ embeds: [embed], components });
 }
 
@@ -186,10 +177,9 @@ async function updatePanel(channel: VoiceChannel, ownerId: string): Promise<void
     const targetOverwrite = channel.permissionOverwrites.cache.get(targetRoleId) || channel.permissionOverwrites.cache.get(channel.guild.roles.everyone.id);
 
     const isLocked = targetOverwrite?.deny.has(PermissionFlagsBits.Connect) ?? false;
-    const isHidden = targetOverwrite?.deny.has(PermissionFlagsBits.ViewChannel) ?? false;
 
     const embed = buildPanelEmbed(owner, channel, config?.verifiedRoleId);
-    const components = buildPanelComponents(isLocked, isHidden);
+    const components = buildPanelComponents(isLocked);
 
     await panelMessage.edit({ embeds: [embed], components });
   } catch (err) {
@@ -451,25 +441,6 @@ export async function handleTempVCInteraction(interaction: Interaction): Promise
           content: isLocked
             ? '🔓 Canal desbloqueado. Todos pueden unirse.'
             : '🔒 Canal bloqueado. Solo tú y los miembros con permiso explícito pueden entrar.',
-        });
-        await updatePanel(memberVoiceChannel, userId);
-        return;
-      }
-
-      // ── Toggle Visibility ────────────────────────────────────────────────
-      if (customId === 'tempvc_toggle_visibility') {
-        const targetRoleId = await getTargetRoleId(guild.id, guild);
-        const targetOverwrite = memberVoiceChannel.permissionOverwrites.cache.get(targetRoleId);
-        const isHidden = targetOverwrite ? (!targetOverwrite.allow.has(PermissionFlagsBits.ViewChannel) || targetOverwrite.deny.has(PermissionFlagsBits.ViewChannel)) : false;
-
-        await memberVoiceChannel.permissionOverwrites.edit(targetRoleId, {
-          ViewChannel: isHidden ? true : false,
-        });
-
-        await interaction.editReply({
-          content: isHidden
-            ? '👁️ Canal ahora **visible** para todos.'
-            : '🙈 Canal ahora **oculto** para todos.',
         });
         await updatePanel(memberVoiceChannel, userId);
         return;
@@ -948,22 +919,6 @@ export async function handleVCCommand(interaction: ChatInputCommandInteraction):
     if (subcommand === 'unlock') {
       await memberVoiceChannel.permissionOverwrites.edit(guild.roles.everyone, { Connect: null });
       await interaction.editReply({ content: '🔓 Canal desbloqueado. Todos pueden unirse.' });
-      await updatePanel(memberVoiceChannel, tempChannelDb.ownerId);
-      return;
-    }
-
-    // ── Hide ─────────────────────────────────────────────────────────────
-    if (subcommand === 'hide') {
-      await memberVoiceChannel.permissionOverwrites.edit(guild.roles.everyone, { ViewChannel: false });
-      await interaction.editReply({ content: '🙈 Canal ahora oculto para todos.' });
-      await updatePanel(memberVoiceChannel, tempChannelDb.ownerId);
-      return;
-    }
-
-    // ── Show ─────────────────────────────────────────────────────────────
-    if (subcommand === 'show') {
-      await memberVoiceChannel.permissionOverwrites.edit(guild.roles.everyone, { ViewChannel: null });
-      await interaction.editReply({ content: '👁️ Canal ahora visible para todos.' });
       await updatePanel(memberVoiceChannel, tempChannelDb.ownerId);
       return;
     }
