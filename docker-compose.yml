@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  # 🤖 Backend API + Bot de Discord
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.bot
+    container_name: retrabot_backend
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - NODE_ENV=production
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID}
+      - DISCORD_CLIENT_SECRET=${DISCORD_CLIENT_SECRET}
+      - DISCORD_REDIRECT_URI=${DISCORD_REDIRECT_URI}
+      - DASHBOARD_URL=${DASHBOARD_URL}
+      - DATABASE_URL=file:../prisma/dev.db
+    volumes:
+      - bot_data:/app/shared/prisma
+
+  # 🌐 Frontend Dashboard (Nginx)
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+      args:
+        - VITE_API_URL=${VITE_API_URL}
+    container_name: retrabot_dashboard
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  bot_data:

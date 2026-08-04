@@ -1,0 +1,229 @@
+
+# 📋 Comandos del Bot y Panel — RetraBot
+
+## Leyenda de permisos
+| Símbolo | Significado |
+|---|---|
+| 👤 | Cualquier usuario del servidor |
+| 🎰 | Solo en canales de casino configurados |
+| 🛡️ | Staff del servidor (rol configurado en el panel) O Administrador de Discord |
+| 🔑 | Administrador de Discord (permiso nativo) |
+| 👑 | Líder de clan O Staff |
+
+---
+
+## 🤖 Comandos Slash (/)
+
+### 📊 Niveles y XP
+
+| Comando | Descripción | Permiso |
+|---|---|---|
+| `/rank [usuario]` | Muestra tu nivel de texto y voz actual (o el de otro usuario) | 👤 |
+| `/leaderboard` | Muestra el ranking del servidor (Texto, Voz, Prestigio, General) | 👤 |
+| `/xp txt add <usuario> [xp] [niveles]` | Añade XP o niveles de texto a un usuario | 🛡️ (ManageGuild) |
+| `/xp txt remove <usuario> [xp] [niveles]` | Quita XP o niveles de texto a un usuario | 🛡️ (ManageGuild) |
+| `/xp txt set <usuario> [nivel] [xp]` | Establece nivel/XP exacto de texto | 🛡️ (ManageGuild) |
+| `/xp txt reset <usuario>` | Reinicia XP y nivel de texto | 🛡️ (ManageGuild) |
+| `/xp vc add <usuario> [xp] [niveles]` | Añade XP o niveles de voz | 🛡️ (ManageGuild) |
+| `/xp vc remove <usuario> [xp] [niveles]` | Quita XP o niveles de voz | 🛡️ (ManageGuild) |
+| `/xp vc set <usuario> [nivel] [xp]` | Establece nivel/XP exacto de voz | 🛡️ (ManageGuild) |
+| `/xp vc reset <usuario>` | Reinicia XP y nivel de voz | 🛡️ (ManageGuild) |
+| `/xp reset-all <usuario>` | Reinicia completamente XP Texto y Voz | 🛡️ (ManageGuild) |
+| `/prestigiar <usuario>` | Inicia el proceso de prestigio para un usuario (requiere Nivel 100) | 🛡️ (ManageGuild) |
+
+### 🎂 Cumpleaños
+
+| Comando | Descripción | Permiso |
+|---|---|---|
+| `/cumpleaños establecer <dia> <mes>` | Registra o actualiza tu fecha de cumpleaños | 👤 (con cooldown de edición) |
+| `/cumpleaños ver` | Muestra tu fecha de cumpleaños registrada | 👤 (solo propia) |
+
+### 🔊 Canales de Voz Temporales (TempVC)
+
+| Comando | Descripción | Permiso |
+|---|---|---|
+| `/setup-tempvc <canal>` | Configura el canal maestro creador de VCs temporales | 🔑 (Administrador) |
+| `/vc lock` | Bloquea tu canal temporal | 👤 (solo propietario del canal) |
+| `/vc unlock` | Desbloquea tu canal temporal | 👤 (solo propietario) |
+| `/vc hide` | Oculta tu canal temporal | 👤 (solo propietario) |
+| `/vc show` | Hace visible tu canal temporal | 👤 (solo propietario) |
+| `/vc rename <nombre>` | Renombra tu canal temporal | 👤 (solo propietario) |
+| `/vc limit <numero>` | Ajusta el límite de usuarios | 👤 (solo propietario) |
+| `/vc kick [usuario] [id]` | Expulsa y veta a alguien de tu canal | 👤 (solo propietario) |
+| `/vc admit [usuario] [id]` | Permite entrada a un usuario vetado | 👤 (solo propietario) |
+| `/vc transfer <usuario>` | Transfiere la propiedad del canal | 👤 (solo propietario) |
+| `/vc claim` | Reclama un canal cuyo dueño ya no está | 👤 (cualquier miembro en el canal) |
+
+### 💰 Economía (Slash)
+
+| Comando | Descripción | Permiso |
+|---|---|---|
+| `/pay <usuario> <cantidad>` | Transfiere dinero en efectivo a otro usuario | 👤 |
+| `/economy add <usuario> <cantidad>` | Añade dinero al saldo de un usuario | 🛡️ (ManageGuild) |
+| `/economy remove <usuario> <cantidad>` | Retira dinero de un usuario | 🛡️ (ManageGuild) |
+| `/economy set <usuario> <cantidad>` | Establece saldo exacto de un usuario | 🛡️ (ManageGuild) |
+| `/inventory [usuario]` | Muestra objetos coleccionables de la temporada | 👤 |
+| `/top` | Ranking de usuarios más ricos | 👤 |
+| `/baltop` | Ranking de usuarios más ricos (alias) | 👤 |
+
+### 🐓 Gallos (Slash)
+
+| Comando | Descripción | Permiso |
+|---|---|---|
+| `/gallo gallinero` | Ver tus 3 gallos, su fuerza y estado | 👤 |
+| `/gallo comprar [nombre]` | Comprar un nuevo gallo | 👤 |
+| `/gallo entrenar <gallo> [minutos]` | Poner a entrenar un gallo | 👤 |
+| `/gallo pelear <apuesta> [gallo]` | Enviar un gallo a combatir | 👤 |
+
+---
+
+## 💬 Comandos de Prefijo (!)
+
+> Todos los comandos de prefijo de economía/casino solo funcionan en los **canales de casino** configurados — excepto los comandos de staff, que funcionan en cualquier canal.
+
+### 💳 Economía Personal
+
+| Comando | Alias | Descripción | Permiso |
+|---|---|---|---|
+| `!bal` | `!balance`, `!money`, `!dinero` | Ver saldo propio o de otro usuario | 👤 🎰 |
+| `!dep <cantidad>` | `!deposit` | Depositar dinero al banco | 👤 🎰 |
+| `!with <cantidad>` | `!withdraw` | Retirar dinero del banco | 👤 🎰 |
+| `!work` | — | Trabajar para ganar dinero (cooldown) | 👤 🎰 |
+| `!crime` | — | Cometer un crimen (riesgo/recompensa) | 👤 🎰 |
+| `!slut` | — | Otra actividad de riesgo/recompensa | 👤 🎰 |
+| `!rob @usuario` | — | Intentar robar a otro usuario | 👤 🎰 |
+| `!pay @usuario <cantidad>` | `!dar`, `!pagar`, `!give`, `!transfer` | Transferir dinero | 👤 🎰 |
+| `!collect` | `!cobrar`, `!collect-income`, `!role-income` | Cobrar ingresos pasivos del rol | 👤 🎰 |
+| `!role-income` | — | Ver roles con ingresos pasivos configurados | 👤 🎰 |
+
+### 🎰 Casino y Juegos
+
+| Comando | Alias | Descripción | Permiso |
+|---|---|---|---|
+| `!bj <apuesta>` | `!blackjack` | Jugar al Blackjack | 👤 🎰 |
+| `!sm <apuesta>` | `!slot`, `!slot-machine` | Jugar a la tragaperras | 👤 🎰 |
+| `!roulette <apuesta> <color/número>` | — | Jugar a la ruleta | 👤 🎰 |
+| `!cf <apuesta> [gallo]` | `!chicken-fight` | Pelea de gallos directa | 👤 🎰 |
+
+### 🛒 Tienda e Inventario
+
+| Comando | Alias | Descripción | Permiso |
+|---|---|---|---|
+| `!shop` | `!store`, `!tienda` | Ver la tienda del servidor | 👤 🎰 |
+| `!buy <nombre>` | — | Comprar un rol o item de la tienda | 👤 🎰 |
+| `!inv` | `!inventory`, `!mochila`, `!inventario`, `!items` | Ver inventario propio o de otro usuario | 👤 🎰 |
+| `!buy-chicken` | `!buy-ken` | Comprar un gallo | 👤 🎰 |
+
+### 📊 Rankings
+
+| Comando | Alias | Descripción | Permiso |
+|---|---|---|---|
+| `!top` | `!baltop`, `!richest`, `!topmoney` | Top de usuarios más ricos | 👤 🎰 |
+
+### 🐓 Gallos (Prefijo)
+
+| Comando | Descripción | Permiso |
+|---|---|---|
+| `!gallo gallinero` | Ver tu gallinero | 👤 🎰 |
+| `!gallo comprar [nombre]` | Comprar gallo | 👤 🎰 |
+| `!gallo entrenar <id> [minutos]` | Entrenar gallo | 👤 🎰 |
+| `!gallo pelear <apuesta> [gallo]` | Pelea de gallo | 👤 🎰 |
+
+### 🛡️ Staff — Economía (solo staff)
+
+> Estos comandos ignoran la restricción de canal de casino.
+
+| Comando | Alias | Descripción | Permiso |
+|---|---|---|---|
+| `!add-money @user <cantidad>` | `!dar-dinero`, `!addmoney` | Dar dinero a un usuario | 🛡️ |
+| `!remove-money @user <cantidad>` | `!quitar-dinero`, `!removemoney` | Quitar dinero a un usuario | 🛡️ |
+| `!set-money @user <cantidad>` | `!fijar-dinero`, `!setmoney` | Establecer saldo exacto | 🛡️ |
+
+### 🛡️ Clanes (Prefijo)
+
+| Comando | Alias | Descripción | Permiso |
+|---|---|---|---|
+| `-clan` | `!clan` | Abrir el panel de control del clan | 👑 (líder o staff) |
+
+> Solo funciona en canales dentro de la **categoría de clanes** configurada.
+
+---
+
+## 🖥️ Panel de Control (Dashboard)
+
+> **Acceso al panel**: Requiere ser **Administrador de Discord** (permiso nativo), **dueño del servidor**, o estar en la lista de servidores administrables de la sesión OAuth2.
+
+### ⚙️ Ajustes Generales
+
+| Opción | Permiso |
+|---|---|
+| Activar/Desactivar módulo de Niveles | 🔑 Admin Dashboard |
+| Activar/Desactivar módulo de Economía | 🔑 Admin Dashboard |
+| Activar/Desactivar módulo de Clanes | 🔑 Admin Dashboard |
+| **Habilitar/Deshabilitar módulo de Cumpleaños** | 🔑 Admin Dashboard |
+| Configurar roles de Administración del Bot (`adminRoleIds`) | 🔑 Admin Dashboard |
+| Canal de subida de nivel | 🔑 Admin Dashboard |
+| Mensaje de subida de nivel | 🔑 Admin Dashboard |
+| Cooldown de XP de texto (segundos) | 🔑 Admin Dashboard |
+| XP mínima/máxima por mensaje | 🔑 Admin Dashboard |
+| XP por minuto en voz | 🔑 Admin Dashboard |
+| Canales ignorados (sin XP) | 🔑 Admin Dashboard |
+| Roles ignorados (sin XP) | 🔑 Admin Dashboard |
+
+### 🎂 Cumpleaños
+
+| Opción | Permiso |
+|---|---|
+| Canal de felicitación de cumpleaños | 🔑 Admin Dashboard |
+| Mensaje de cumpleaños (personalizable con variables) | 🔑 Admin Dashboard |
+| Rol de cumpleaños (se asigna el día del cumpleaños) | 🔑 Admin Dashboard |
+| Tiempo de bloqueo tras establecer fecha (días) | 🔑 Admin Dashboard |
+
+### 🎖️ Roles por Nivel
+
+| Opción | Permiso |
+|---|---|
+| Añadir rol por nivel de Texto | 🔑 Admin Dashboard |
+| Añadir rol por nivel de Voz | 🔑 Admin Dashboard |
+| Eliminar un rol por nivel | 🔑 Admin Dashboard |
+
+### ⭐ Roles de Prestigio
+
+| Opción | Permiso |
+|---|---|
+| Configurar rol por nivel de Prestigio | 🔑 Admin Dashboard |
+
+### 💰 Economía
+
+| Opción | Permiso |
+|---|---|
+| Símbolo de moneda | 🔑 Admin Dashboard |
+| Canales de casino permitidos | 🔑 Admin Dashboard |
+| Cooldowns de trabajo/crimen/slut/robo | 🔑 Admin Dashboard |
+| Ganancias de trabajo/crimen/slut | 🔑 Admin Dashboard |
+| Configurar ingresos pasivos por rol | 🔑 Admin Dashboard |
+| Tienda de roles (añadir/eliminar) | 🔑 Admin Dashboard |
+| Tienda de items coleccionables (añadir/eliminar) | 🔑 Admin Dashboard |
+| Reset de temporada | 🔑 Admin Dashboard |
+
+### 🛡️ Clanes
+
+| Opción | Permiso |
+|---|---|
+| Categoría de Discord de los clanes | 🔑 Admin Dashboard |
+| Rol de líder de clan global | 🔑 Admin Dashboard |
+| Ver lista de clanes activos | 🔑 Admin Dashboard |
+| Crear nuevo clan (en Discord y BD) | 🔑 Admin Dashboard |
+| Importar clan desde canal de voz existente | 🔑 Admin Dashboard |
+| Eliminar clan | 🔑 Admin Dashboard |
+| Dar/quitar monedas de clan | 🔑 Admin Dashboard |
+| Tienda de clanes (gestionar items) | 🔑 Admin Dashboard |
+| Comprar item de tienda para un clan | 🔑 Admin Dashboard |
+
+### 📊 Estadísticas / Leaderboard
+
+| Opción | Permiso |
+|---|---|
+| Ver ranking de texto/voz/prestige | 🔑 Admin Dashboard |
+| Ver ranking de economía | 🔑 Admin Dashboard |
+| Ver estadísticas generales del servidor | 🔑 Admin Dashboard |

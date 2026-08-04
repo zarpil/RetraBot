@@ -1,0 +1,41 @@
+# Dockerfile para el Backend (Bot de Discord + Express API)
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copiar paquetes e instalar dependencias
+COPY package*.json ./
+COPY shared/package*.json ./shared/
+COPY bot/package*.json ./bot/
+COPY shared/prisma ./shared/prisma
+
+RUN npm ci
+
+# Copiar código fuente
+COPY shared ./shared
+COPY bot ./bot
+
+# Generar Prisma Client y compilar TypeScript
+RUN npx prisma generate --schema=./shared/prisma/schema.prisma
+RUN npm run build --workspace=bot
+
+# Imagen final de producción
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+
+COPY package*.json ./
+COPY shared/package*.json ./shared/
+COPY bot/package*.json ./bot/
+
+RUN npm ci --only=production
+
+COPY --from=builder /app/shared ./shared
+COPY --from=builder /app/bot/dist ./bot/dist
+COPY --from=builder /app/node_modules ./node_modules
+
+EXPOSE 3001
+
+CMD ["node", "bot/dist/index.js"]

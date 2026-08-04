@@ -1,0 +1,359 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:../dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model GuildConfig {
+  guildId            String   @id
+  levelingEnabled    Boolean  @default(true)
+  tempVcEnabled      Boolean  @default(true)
+  tempVcCategoryId   String?
+  tempVcChannelId    String?  // The master voice channel ID
+  minXpPerMessage    Int      @default(15)
+  maxXpPerMessage    Int      @default(25)
+  xpCooldownSeconds  Int      @default(60)
+  xpPerMinuteVc      Int      @default(10)
+  levelUpChannelId   String?  // null = same channel, 'dm' = direct message, or specific channelId
+  levelUpMessage     String   @default("🎉 ¡Enhorabuena {user}! Has subido al **nivel {level}**!")
+  ignoredChannels    String   @default("") // Comma separated channel IDs
+  ignoredRoles       String   @default("") // Comma separated role IDs excluded from gaining XP
+  adminRoleIds       String   @default("") // Comma separated role IDs allowed to run admin bot commands
+  verifiedRoleId     String?  // Optional role ID for verified/member role to control TempVC permissions
+  commandsChannelId  String?  // Optional specific channel ID for non-staff to run bot commands like /rank and /leaderboard
+  charlatanRoleId    String?  // Monthly role awarded to Top 1 Message sender of previous month
+  charleteroRoleId   String?  // Monthly role awarded to Top 1 Voice time user of previous month
+  seasonWinnerRoleId String?  // Seasonal role awarded to Top 1 Economy user at season reset
+  
+  // Economy & Casino Settings
+  economyEnabled     Boolean  @default(true)
+  currencySymbol     String   @default("💶")
+  workMinPayout      Int      @default(1000)
+  workMaxPayout      Int      @default(5000)
+  workCooldownSec    Int      @default(30)
+  crimeMinPayout     Int      @default(1500)
+  crimeMaxPayout     Int      @default(5500)
+  crimeCooldownSec   Int      @default(30)
+  slutMinPayout      Int      @default(1200)
+  slutMaxPayout      Int      @default(4700)
+  slutCooldownSec    Int      @default(30)
+  robCooldownSec     Int      @default(300) // 5 minutes
+  robMinPercent      Int      @default(20)  // Min % of victim cash to steal (20%)
+  robMaxPercent      Int      @default(80)  // Max % of victim cash to steal (80%)
+  chickenCost            Int      @default(5000) // Price to buy chicken
+  piensoCost             Int      @default(3000) // Price for Pienso Proteico
+  piensoDurationMins     Int      @default(30)   // Duration of Pienso boost in minutes
+  piensoBoostPercent     Int      @default(10)   // Strength boost % from Pienso
+  medkitCost             Int      @default(2500) // Price for Botiquín de Curación
+  bandageCost            Int      @default(5000) // Price for Vendas de Espolón
+  vitaminCost            Int      @default(2500) // Price for Suplemento Vitamínico
+  vitaminBoostPercent    Int      @default(15)   // Strength boost % from Vitamin
+  cageCost               Int      @default(15000) // Price to buy training cage (Lvl 1 Capacity)
+  cageCapacityLvl2Cost   Int      @default(40000) // Price for 2 training slots
+  cageCapacityLvl3Cost   Int      @default(80000) // Price for 3 training slots
+  cageMuscleLvl1Cost     Int      @default(15000) // Price for Muscle Lvl 1 (+25% strength)
+  cageMuscleLvl2Cost     Int      @default(35000) // Price for Muscle Lvl 2 (+50% strength)
+  cageMuscleLvl3Cost     Int      @default(70000) // Price for Muscle Lvl 3 (+100% strength)
+  cageCardioLvl1Cost     Int      @default(10000) // Price for Cardio Lvl 1 (-15% time)
+  cageCardioLvl2Cost     Int      @default(25000) // Price for Cardio Lvl 2 (-30% time)
+  cageCardioLvl3Cost     Int      @default(50000) // Price for Cardio Lvl 3 (-50% time)
+  cagePhysioLvl1Cost     Int      @default(20000) // Price for Physio Lvl 1 (-50% injury chance)
+  cagePhysioLvl2Cost     Int      @default(45000) // Price for Physio Lvl 2 (Immunity after training)
+  chickenMinBirthWinRate Float    @default(30.0) // Min birth WinRate
+  chickenMaxBirthWinRate Float    @default(55.0) // Max birth WinRate (Cap)
+  chickenInjuryMins      Int      @default(5)    // Rest time when injured in minutes
+  chickenInjuryChance    Int      @default(25)   // % Chance of injury when winning a battle (0 - 100)
+  chickenNames           String   @default("El Espolón Rojo,Cresta de Acero,Pico de Sangre,El Asesino,Rayo Plumado,Furia Roja,Tormenta Ciega")
+  incomeIntervalHours Int     @default(3)   // 3 hours for /collect-income
+  casinoChannels     String   @default("")  // Comma separated channel IDs allowed for casino/economy
+  workMessages       String   @default("")  // Custom work response messages
+  crimeMessages      String   @default("")  // Custom crime success response messages
+  crimeFailMessages  String   @default("")  // Custom crime fail response messages
+  slutMessages       String   @default("")  // Custom slut success response messages
+  slutFailMessages   String   @default("")  // Custom slut fail response messages
+  casinoLogChannelId String?  // Optional channel ID to send dedicated economy & casino logs
+  slotMachineDifficulty String @default("NORMAL") // "NORMAL" | "EASY" | "VERY_EASY"
+  startingBalance    Int      @default(1000) // Initial cash for new users / season reset
+  
+  // Clan Settings
+  clansEnabled         Boolean  @default(true)
+  clansCategoryId      String?  // Category ID where clan VCs are created
+  clanLeaderRoleId     String?  // Master role ID for Clan Leaders
+  monthlyClanHoursGoal Int      @default(50) // Required monthly hours goal for clans (FIXED mode)
+  clanGoalMode         String   @default("FIXED") // "FIXED" | "PER_MEMBER"
+  clanHoursPerMember   Int      @default(10) // Hours required per member per month (PER_MEMBER mode)
+  clanCoinsPerHour     Float    @default(0.5) // Clan coins awarded per active voice hour
+  clanCurrencyName     String   @default("GloriCoins") // Name of clan currency
+  clanShopTicketMessage String? @default("🎟️ Abre un ticket de soporte con el Staff para entregar los archivos de tu item comprado.")
+  clansLogChannelId    String?  // Optional dedicated channel ID for clan audit logs
+
+  // Birthday settings
+  birthdayEnabled    Boolean  @default(true)
+  birthdayRoleId     String?
+  birthdayChannelId  String?  // 'dm', specific channel ID, or null
+  birthdayMessage    String   @default("🎉 ¡Feliz cumpleaños {user}! Que pases un gran día.")
+}
+
+model LevelRole {
+  id        String @id @default(uuid())
+  guildId   String
+  type      String @default("TEXT") // "TEXT" or "VOICE"
+  level     Int
+  roleId    String
+
+  @@unique([guildId, type, level])
+  @@index([guildId])
+}
+
+model UserXP {
+  id           String   @id // Formatted as "guildId-userId"
+  guildId      String
+  userId       String
+  // Text Leveling
+  textXp              Int      @default(0)
+  textLevel           Int      @default(0)
+  messageCount        Int      @default(0)
+  monthlyMessageCount Int      @default(0) // Reset on 1st of every month for Charletero role
+  prestige            Int      @default(0)
+  // Voice Leveling
+  voiceXp             Int      @default(0)
+  voiceLevel          Int      @default(0)
+  vcSeconds           Int      @default(0)
+  monthlyVcSeconds    Int      @default(0) // Reset on 1st of every month for Charlatan role
+  lastActive          DateTime @default(now())
+
+  @@index([guildId, userId])
+}
+
+model PrestigeRole {
+  id            String @id @default(uuid())
+  guildId       String
+  prestigeLevel Int
+  roleId        String
+
+  @@unique([guildId, prestigeLevel])
+  @@index([guildId])
+}
+
+model TempChannel {
+  channelId     String   @id
+  guildId       String
+  ownerId       String
+  textChannelId String?
+  createdAt     DateTime @default(now())
+}
+
+model UserEconomy {
+  id           String    @id // Formatted as "guildId-userId"
+  guildId      String
+  userId       String
+  cash         Int       @default(1000)
+  bank         Int       @default(0)
+  hasChicken   Boolean   @default(false)
+  lastWork     DateTime?
+  lastCrime    DateTime?
+  lastSlut     DateTime?
+  lastRob      DateTime?
+  lastIncome   DateTime?
+
+  @@index([guildId, userId])
+}
+
+model RoleIncome {
+  id           String  @id @default(uuid())
+  guildId      String
+  roleId       String
+  incomeAmount Int     @default(0)
+  intervalHours Int    @default(3) // Custom interval in hours for this specific role
+  isSeasonal   Boolean @default(true) // If true, role is removed and renamed during seasonal reset
+
+  @@unique([guildId, roleId])
+  @@index([guildId])
+}
+
+model UserRoleIncomeCooldown {
+  id         String   @id // Formatted as "guildId-userId-roleId"
+  guildId    String
+  userId     String
+  roleId     String
+  lastClaim  DateTime @default(now())
+
+  @@index([guildId, userId])
+}
+
+model ShopRole {
+  id          String   @id @default(uuid())
+  guildId     String
+  roleId      String
+  price       Int
+  description String   @default("")
+  icon        String   @default("🛒")
+  createdAt   DateTime @default(now())
+
+  @@unique([guildId, roleId])
+  @@index([guildId])
+}
+
+model ShopItem {
+  id          String   @id @default(uuid())
+  guildId     String
+  name        String
+  price       Int
+  description String   @default("")
+  icon        String   @default("🎒")
+  rarity      String   @default("Común") // "Común" | "Raro" | "Épico" | "Legendario" | "Mítico"
+  isSeasonal  Boolean  @default(true)
+  isAvailable Boolean  @default(true) // If false, item is retired from shop (Limited Edition), but kept in user inventories
+  createdAt   DateTime @default(now())
+
+  @@index([guildId])
+}
+
+model UserInventory {
+  id         String   @id // Formatted as "guildId-userId-shopItemId"
+  guildId    String
+  userId     String
+  shopItemId String
+  quantity   Int      @default(1)
+  createdAt  DateTime @default(now())
+
+  @@index([guildId, userId])
+}
+
+// ── CLAN SYSTEM ──────────────────────────────────────────────────────────
+model Clan {
+  id             String   @id @default(uuid())
+  guildId        String
+  name           String
+  leaderId       String
+  roleId         String
+  voiceChannelId String
+  colorHex       String   @default("#5865F2")
+  createdAt      DateTime @default(now())
+
+  // Clan Economy & Shop Perks
+  coins            Float   @default(0)   // Clan coins balance (GloriCoins)
+  immunityShields  Int     @default(0)   // Max 3 protection shields against monthly hour resets
+  hasMediaPerms    Boolean @default(false) // Photos/videos/embeds permission in clan VC
+  hasSoundboardPerms Boolean @default(false) // Soundboard permission in clan VC
+  isHiddenClan     Boolean @default(false) // Hide clan VC from @everyone
+
+  @@unique([guildId, name])
+  @@unique([guildId, roleId])
+  @@index([guildId])
+}
+
+model ClanMember {
+  id        String   @id // Formatted as "clanId-userId"
+  clanId    String
+  guildId   String
+  userId    String
+  joinedAt  DateTime @default(now())
+
+  @@unique([clanId, userId])
+  @@index([guildId, clanId])
+}
+
+model ClanMemberMonthlyStats {
+  id             String   @id // Formatted as "clanId-userId-yearMonth" (e.g. "uuid-123456-2026-07")
+  clanId         String
+  guildId        String
+  userId         String
+  yearMonth      String   // Format "YYYY-MM"
+  secondsSpent   Int      @default(0)
+  dailyStatsJson String   @default("{}") // Format JSON: { "2026-07-24": 3600 }
+
+  @@unique([clanId, userId, yearMonth])
+  @@index([guildId, clanId, yearMonth])
+}
+
+model ClanShopItem {
+  id           String   @id @default(uuid())
+  guildId      String
+  name         String
+  price        Float
+  description  String
+  icon         String   @default("🛒")
+  category     String   @default("PERK") // "PERK" | "CUSTOM"
+  actionKey    String?  // "MEDIA_PERMS" | "SOUNDBOARD" | "HIDE_CLAN" | "IMMUNITY_SHIELD" | "CUSTOM"
+  maxPerClan   Int      @default(1)
+  createdAt    DateTime @default(now())
+
+  @@index([guildId])
+}
+
+model ClanPurchaseHistory {
+  id          String   @id @default(uuid())
+  guildId     String
+  clanId      String
+  itemId      String
+  itemName    String
+  price       Float
+  buyerId     String   // Discord User ID of clan leader who bought it
+  status      String   @default("COMPLETED") // "COMPLETED" | "PENDING_STAFF" | "FULFILLED"
+  purchasedAt DateTime @default(now())
+
+  @@index([guildId, clanId])
+}
+
+// ── GALLO RPG & TRIBU DE GALLOS ──────────────────────────────────────────
+
+model Chicken {
+  id                String    @id @default(uuid())
+  guildId           String
+  userId            String
+  name              String    @default("Gallo Fiero")
+  winRate           Float     @default(35.0) // Real WinRate (30.0 - 85.0%)
+  isTraining        Boolean   @default(false)
+  trainingEndsAt    DateTime?
+  trainingDuration  Int?      // Duration in minutes (5, 15, 30, 60)
+  piensoBoostEndsAt DateTime? // Temp boost until this time (+15% WinRate boost during fights)
+  isInjured         Boolean   @default(false)
+  injuredEndsAt     DateTime? // Injured until this timestamp
+  hasBandage        Boolean   @default(false) // 1-use protection: if fight lost, chicken avoids leaving team
+  hasVitamin        Boolean   @default(false) // 1-use temp fight strength boost
+  injuryImmune      Boolean   @default(false) // 1-use immunity to injury from Physio Lvl 2
+  createdAt         DateTime  @default(now())
+
+  @@index([guildId, userId])
+}
+
+model UserCage {
+  id            String   @id // Formatted as "guildId-userId"
+  guildId       String
+  userId        String
+  hasCage       Boolean  @default(false)
+  cageLevel     Int      @default(1) // Deprecated flat level
+  hasProtein    Boolean  @default(false) // Deprecated flat protein
+  hasBooster    Boolean  @default(false) // Deprecated flat booster
+  capacityLevel Int      @default(1) // 1, 2, or 3 simultaneous training slots
+  muscleLevel   Int      @default(0) // 0=0%, 1=+25%, 2=+50%, 3=+100% strength gain
+  cardioLevel   Int      @default(0) // 0=0%, 1=-15%, 2=-30%, 3=-50% training time
+  physioLevel   Int      @default(0) // 0=none, 1=-50% injury chance, 2=injury immunity post-train
+  piensoCount   Int      @default(0) // Inventory count of Pienso Proteico (+15% temp fight boost)
+  medkitCount   Int      @default(0) // Inventory count of Botiquines de Curación
+  bandageCount  Int      @default(0) // Inventory count of Vendas de Espolón
+  vitaminCount  Int      @default(0) // Inventory count of Suplementos Vitamínicos
+  createdAt     DateTime @default(now())
+
+  @@index([guildId, userId])
+}
+
+model UserBirthday {
+  id                 String    @id // Formatted as "guildId-userId"
+  guildId            String
+  userId             String
+  birthDay           Int       // 1 - 31
+  birthMonth         Int       // 1 - 12
+  lastCelebratedYear Int       @default(0) // Prevent double congratulations in the same year
+  createdAt          DateTime  @default(now())
+  lastSetAt          DateTime  @default(now())
+  lockedUntil        DateTime? // Cooldown for editing birthday
+  birthdayRoleAssigned Boolean   @default(false) // Track if the bot assigned the temporary role
+
+  @@index([guildId, userId])
+}
+
