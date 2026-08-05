@@ -303,7 +303,12 @@ client.on(Events.ClientReady, async (c) => {
             .setDescription('Enviar un gallo a combatir en la batalla (¡Consigue el x2 de premio!)')
             .addStringOption(opt => opt.setName('apuesta').setDescription('Cantidad de dinero de entrada (ej: 50k, 1m)').setRequired(true))
             .addStringOption(opt => opt.setName('gallo').setDescription('ID o número del gallo (#1, #2, #3)').setRequired(false))
-        )
+        ),
+      new SlashCommandBuilder()
+        .setName('say')
+        .setDescription('Envía un mensaje a través del bot en el canal actual (Solo Staff)')
+        .addStringOption(opt => opt.setName('mensaje').setDescription('El texto que enviará el bot').setRequired(true))
+        .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
     ].map(cmd => cmd.toJSON());
 
     console.log('🔄 Registrando comandos slash...');
@@ -575,6 +580,25 @@ client.on(Events.InteractionCreate, async (interaction) => {
           });
         }
       }
+    }
+
+    if (commandName === 'say') {
+      const isStaff = await isUserStaffOrAdmin(guildId, member);
+      if (!isStaff) {
+        return interaction.reply({
+          content: '❌ No tienes permisos para usar el comando `/say`. (Requiere Staff o Administrador).',
+          ephemeral: true,
+        });
+      }
+
+      const messageText = interaction.options.getString('mensaje', true);
+
+      await interaction.reply({ content: '✅ Mensaje enviado correctamente.', ephemeral: true });
+
+      if (interaction.channel && 'send' in interaction.channel) {
+        await (interaction.channel as any).send(messageText);
+      }
+      return;
     }
 
     if (commandName === 'rank') {
