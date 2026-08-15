@@ -23,6 +23,12 @@ model GuildConfig {
   ignoredChannels    String   @default("") // Comma separated channel IDs
   ignoredRoles       String   @default("") // Comma separated role IDs excluded from gaining XP
   adminRoleIds       String   @default("") // Comma separated role IDs allowed to run admin bot commands
+  levelingRoles      String   @default("") // Comma separated role IDs allowed to configure leveling
+  tempVcRoles        String   @default("") // Comma separated role IDs allowed to configure tempvc
+  clansRoles         String   @default("") // Comma separated role IDs allowed to configure clans
+  casinoRoles        String   @default("") // Comma separated role IDs allowed to configure casino/economy
+  birthdaysRoles     String   @default("") // Comma separated role IDs allowed to configure birthdays
+  triggersRoles      String   @default("") // Comma separated role IDs allowed to configure custom triggers
   verifiedRoleId     String?  // Optional role ID for verified/member role to control TempVC permissions
   commandsChannelId  String?  // Optional specific channel ID for non-staff to run bot commands like /rank and /leaderboard
   charlatanRoleId    String?  // Monthly role awarded to Top 1 Message sender of previous month

@@ -14,7 +14,8 @@ import type {
   PrestigeRole,
   ShopRole,
   ShopItem,
-  RoleIncome
+  RoleIncome,
+  GuildPermissions
 } from './types';
 
 // Layout & UI Components
@@ -46,6 +47,16 @@ const MOCK_STATS: ServerStats = {
   activeTempChannels: 3,
   registeredUsersCount: 312,
   name: 'Retrasíados',
+};
+
+const MOCK_PERMISSIONS: GuildPermissions = {
+  admin: true,
+  leveling: true,
+  tempvc: true,
+  clans: true,
+  casino: true,
+  birthdays: true,
+  triggers: true,
 };
 
 const MOCK_CONFIG: GuildConfig = {
@@ -94,6 +105,7 @@ export default function App() {
   const [toast, setToast] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [permissions, setPermissions] = useState<GuildPermissions | null>({ ...MOCK_PERMISSIONS });
 
   // Authentication State
   const [authUser, setAuthUser] = useState<any>(null);
@@ -325,7 +337,7 @@ export default function App() {
   const fetchGuildData = async (gId: string) => {
     if (!gId || !authUser) return;
     try {
-      const [cfgRes, stRes, lbRes, structRes, econRes, clansRes, shopRes] = await Promise.all([
+      const [cfgRes, stRes, lbRes, structRes, econRes, clansRes, shopRes, permRes] = await Promise.all([
         authFetch(`${API_BASE}/api/guilds/${gId}/config`),
         authFetch(`${API_BASE}/api/guilds/${gId}/stats`),
         authFetch(`${API_BASE}/api/guilds/${gId}/leaderboard`),
@@ -333,6 +345,7 @@ export default function App() {
         authFetch(`${API_BASE}/api/guilds/${gId}/economy/leaderboard`),
         authFetch(`${API_BASE}/api/guilds/${gId}/clans`),
         authFetch(`${API_BASE}/api/guilds/${gId}/clans/shop`),
+        authFetch(`${API_BASE}/api/guilds/${gId}/permissions`),
       ]);
 
       if (cfgRes.ok) setConfig(await cfgRes.json());
@@ -341,6 +354,7 @@ export default function App() {
       if (structRes.ok) setStructure(await structRes.json());
       if (econRes.ok) setEconomyLb(await econRes.json());
       if (clansRes.ok) setClans(await clansRes.json());
+      if (permRes.ok) setPermissions(await permRes.json());
       if (shopRes.ok) {
         const items: ClanShopItem[] = await shopRes.json();
         setDbShopItems(items);
@@ -351,6 +365,7 @@ export default function App() {
       setIsOnline(true);
     } catch {
       setIsOnline(false);
+      setPermissions({ ...MOCK_PERMISSIONS });
     }
   };
 
@@ -782,6 +797,7 @@ export default function App() {
         currentGuild={currentGuild}
         stats={stats}
         isOnline={isOnline}
+        permissions={permissions}
       />
 
       {/* Contenido Principal */}

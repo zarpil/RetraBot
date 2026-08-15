@@ -115,6 +115,12 @@ export interface GuildConfig {
   ignoredChannels?: string;
   ignoredRoles?: string;
   adminRoleIds?: string;
+  levelingRoles?: string;
+  tempVcRoles?: string;
+  clansRoles?: string;
+  casinoRoles?: string;
+  birthdaysRoles?: string;
+  triggersRoles?: string;
   charleteroRoleId?: string | null;
   charlatanRoleId?: string | null;
   commandsChannelId?: string | null;
@@ -244,3 +250,13 @@ export interface CustomTrigger {
 
 export type Tab = 'dashboard' | 'general' | 'leveling' | 'tempvc' | 'clans' | 'casino' | 'leaderboard' | 'birthdays' | 'triggers';
 export type CasinoSubTab = 'general' | 'work' | 'crime' | 'slut' | 'rob' | 'chicken' | 'shop' | 'income' | 'reset';
+
+export interface GuildPermissions {
+  admin: boolean;
+  leveling: boolean;
+  tempvc: boolean;
+  clans: boolean;
+  casino: boolean;
+  birthdays: boolean;
+  triggers: boolean;
+}

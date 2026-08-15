@@ -1392,7 +1392,41 @@ function getAuthSession(req: express.Request): AuthSession | null {
 }
 
 // Middleware to enforce Administrator authorization for guild mutations
-function requireGuildAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
+// Helper to check if a member has permission for a specific module
+async function hasModulePermission(member: any, guildId: string, moduleName: 'admin' | 'leveling' | 'tempvc' | 'clans' | 'casino' | 'birthdays' | 'triggers'): Promise<boolean> {
+  if (!member) return false;
+  // 1. Discord Admin/Owner is always allowed
+  if (member.permissions.has(PermissionFlagsBits.Administrator) || member.guild.ownerId === member.id) {
+    return true;
+  }
+
+  // 2. Fetch GuildConfig
+  const config = await prisma.guildConfig.findUnique({ where: { guildId } }).catch(() => null);
+  if (!config) return false;
+
+  // 3. Admin roles list is always allowed
+  const adminRoles = config.adminRoleIds ? config.adminRoleIds.split(',').map(x => x.trim()).filter(Boolean) : [];
+  if (member.roles.cache.some((role: any) => adminRoles.includes(role.id))) {
+    return true;
+  }
+
+  if (moduleName === 'admin') return false;
+
+  // 4. Check specific module roles list
+  let moduleRolesStr = '';
+  if (moduleName === 'leveling') moduleRolesStr = config.levelingRoles;
+  else if (moduleName === 'tempvc') moduleRolesStr = config.tempVcRoles;
+  else if (moduleName === 'clans') moduleRolesStr = config.clansRoles;
+  else if (moduleName === 'casino') moduleRolesStr = config.casinoRoles;
+  else if (moduleName === 'birthdays') moduleRolesStr = config.birthdaysRoles;
+  else if (moduleName === 'triggers') moduleRolesStr = config.triggersRoles;
+
+  const moduleRoles = moduleRolesStr ? moduleRolesStr.split(',').map(x => x.trim()).filter(Boolean) : [];
+  return member.roles.cache.some((role: any) => moduleRoles.includes(role.id));
+}
+
+// Middleware to enforce Administrator or Module staff authorization for guild mutations
+async function requireGuildAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
   const session = getAuthSession(req);
   if (!session) {
     return res.status(401).json({ error: '401 No Autorizado: Debes iniciar sesión con Discord.' });
@@ -1405,12 +1439,50 @@ function requireGuildAdmin(req: express.Request, res: express.Response, next: ex
       return res.status(404).json({ error: 'Servidor no encontrado en la caché del bot.' });
     }
 
-    const member = session.user?.id ? guild.members.cache.get(session.user.id) : null;
-    const isDiscordAdmin = member ? member.permissions.has(PermissionFlagsBits.Administrator) || guild.ownerId === session.user.id : false;
-    const isAuthorized = session.adminGuilds.includes(guildId) || isDiscordAdmin;
+    const member = session.user?.id ? guild.members.cache.get(session.user.id) || await guild.members.fetch(session.user.id).catch(() => null) : null;
+    if (!member) {
+      return res.status(403).json({ error: '403 Prohibido: No eres miembro de este servidor.' });
+    }
 
-    if (!isAuthorized && session.adminGuilds.length > 0) {
-      return res.status(403).json({ error: '403 Prohibido: No posees permisos de Administrador en este servidor.' });
+    const path = req.path.toLowerCase();
+    let requiredModule: 'admin' | 'leveling' | 'tempvc' | 'clans' | 'casino' | 'birthdays' | 'triggers' = 'admin';
+
+    if (path.includes('/level-roles')) {
+      requiredModule = 'leveling';
+    } else if (path.includes('/clans')) {
+      requiredModule = 'clans';
+    } else if (path.includes('/economy') || path.includes('/shop-roles') || path.includes('/shop-items') || path.includes('/role-incomes') || path.includes('/season-reset')) {
+      requiredModule = 'casino';
+    } else if (path.includes('/triggers')) {
+      requiredModule = 'triggers';
+    } else if (path.includes('/config')) {
+      if (req.method === 'GET') {
+        const isAuthorized = await hasModulePermission(member, guildId, 'leveling') ||
+                             await hasModulePermission(member, guildId, 'tempvc') ||
+                             await hasModulePermission(member, guildId, 'clans') ||
+                             await hasModulePermission(member, guildId, 'casino') ||
+                             await hasModulePermission(member, guildId, 'birthdays') ||
+                             await hasModulePermission(member, guildId, 'triggers');
+        if (isAuthorized) {
+          return next();
+        }
+      }
+      requiredModule = 'admin';
+    } else if (path.includes('/structure') || path.includes('/stats') || path.includes('/leaderboard')) {
+      const isAuthorized = await hasModulePermission(member, guildId, 'leveling') ||
+                           await hasModulePermission(member, guildId, 'tempvc') ||
+                           await hasModulePermission(member, guildId, 'clans') ||
+                           await hasModulePermission(member, guildId, 'casino') ||
+                           await hasModulePermission(member, guildId, 'birthdays') ||
+                           await hasModulePermission(member, guildId, 'triggers');
+      if (isAuthorized) {
+        return next();
+      }
+    }
+
+    const isAuthorized = await hasModulePermission(member, guildId, requiredModule);
+    if (!isAuthorized) {
+      return res.status(403).json({ error: `403 Prohibido: No posees permisos suficientes para el módulo '${requiredModule}' en este servidor.` });
     }
   }
 
@@ -1497,15 +1569,42 @@ app.post('/api/auth/callback', authLimiter, async (req, res) => {
       const userGuilds: any[] = await guildsRes.json();
 
       // Filter guilds where user has Administrator (0x8), Manage Guild (0x20), or is Owner
-      const adminGuildIds = Array.isArray(userGuilds)
-        ? userGuilds
-          .filter(g => {
-            const perms = BigInt(g.permissions || 0);
-            const isAdmin = (perms & BigInt(0x8)) !== BigInt(0) || (perms & BigInt(0x20)) !== BigInt(0) || g.owner;
-            return isAdmin && client.guilds.cache.has(g.id);
-          })
-          .map(g => g.id)
-        : [];
+      // Filter guilds where user has Administrator (0x8), Manage Guild (0x20), or is Owner, OR has any staff/module permissions role in the database
+      const adminGuildIds: string[] = [];
+      if (Array.isArray(userGuilds)) {
+        for (const g of userGuilds) {
+          const guild = client.guilds.cache.get(g.id);
+          if (!guild) continue;
+
+          const perms = BigInt(g.permissions || 0);
+          const hasBasicPerm = (perms & BigInt(0x8)) !== BigInt(0) || (perms & BigInt(0x20)) !== BigInt(0) || g.owner;
+          if (hasBasicPerm) {
+            adminGuildIds.push(g.id);
+            continue;
+          }
+
+          const member = guild.members.cache.get(userData.id) || await guild.members.fetch(userData.id).catch(() => null);
+          if (member) {
+            const config = await prisma.guildConfig.findUnique({ where: { guildId: g.id } }).catch(() => null);
+            if (config) {
+              const allAllowedRoles = [
+                ...(config.adminRoleIds ? config.adminRoleIds.split(',') : []),
+                ...(config.levelingRoles ? config.levelingRoles.split(',') : []),
+                ...(config.tempVcRoles ? config.tempVcRoles.split(',') : []),
+                ...(config.clansRoles ? config.clansRoles.split(',') : []),
+                ...(config.casinoRoles ? config.casinoRoles.split(',') : []),
+                ...(config.birthdaysRoles ? config.birthdaysRoles.split(',') : []),
+                ...(config.triggersRoles ? config.triggersRoles.split(',') : [])
+              ].map(x => x.trim()).filter(Boolean);
+
+              const hasStaffRole = member.roles.cache.some(role => allAllowedRoles.includes(role.id));
+              if (hasStaffRole) {
+                adminGuildIds.push(g.id);
+              }
+            }
+          }
+        }
+      }
 
       const avatarUrl = userData.avatar
         ? `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png`
@@ -1581,6 +1680,66 @@ app.get('/api/guilds', (req, res) => {
   }
 
   res.json(guilds);
+});
+
+app.get('/api/guilds/:guildId/permissions', async (req, res) => {
+  const session = getAuthSession(req);
+  if (!session) {
+    return res.status(401).json({ error: 'No autenticado.' });
+  }
+
+  const { guildId } = req.params;
+  const guild = client.guilds.cache.get(guildId);
+  if (!guild) {
+    return res.status(404).json({ error: 'Servidor no encontrado en la caché.' });
+  }
+
+  const member = guild.members.cache.get(session.user.id) || await guild.members.fetch(session.user.id).catch(() => null);
+  if (!member) {
+    return res.status(403).json({ error: 'No eres miembro de este servidor.' });
+  }
+
+  const isDiscordAdmin = member.permissions.has(PermissionFlagsBits.Administrator) || guild.ownerId === session.user.id;
+
+  const permissions = {
+    admin: isDiscordAdmin,
+    leveling: isDiscordAdmin,
+    tempvc: isDiscordAdmin,
+    clans: isDiscordAdmin,
+    casino: isDiscordAdmin,
+    birthdays: isDiscordAdmin,
+    triggers: isDiscordAdmin,
+  };
+
+  if (!isDiscordAdmin) {
+    const config = await prisma.guildConfig.findUnique({ where: { guildId } }).catch(() => null);
+    if (config) {
+      const checkRole = (rolesStr: string) => {
+        const list = rolesStr ? rolesStr.split(',').map(x => x.trim()).filter(Boolean) : [];
+        return member.roles.cache.some(role => list.includes(role.id));
+      };
+
+      const isAdminRole = checkRole(config.adminRoleIds);
+      if (isAdminRole) {
+        permissions.admin = true;
+        permissions.leveling = true;
+        permissions.tempvc = true;
+        permissions.clans = true;
+        permissions.casino = true;
+        permissions.birthdays = true;
+        permissions.triggers = true;
+      } else {
+        permissions.leveling = checkRole(config.levelingRoles);
+        permissions.tempvc = checkRole(config.tempVcRoles);
+        permissions.clans = checkRole(config.clansRoles);
+        permissions.casino = checkRole(config.casinoRoles);
+        permissions.birthdays = checkRole(config.birthdaysRoles);
+        permissions.triggers = checkRole(config.triggersRoles);
+      }
+    }
+  }
+
+  res.json(permissions);
 });
 
 // Endpoint to fetch real server structure (CVE-4: auth required)
