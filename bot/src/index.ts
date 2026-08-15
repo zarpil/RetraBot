@@ -75,6 +75,10 @@ client.on(Events.ClientReady, async (c) => {
   setEconomyClient(c);
   setClansClient(c);
   setCustomTriggersClient(c);
+  try {
+    console.log('📦 Ruta de @prisma/client:', require.resolve('@prisma/client'));
+    console.log('📦 Ruta de shared:', require.resolve('shared'));
+  } catch (err) {}
   console.log('🔑 Modelos de Prisma disponibles:', Object.keys(prisma).filter(k => !k.startsWith('_')));
 
   // Start background monthly scheduler & run check
