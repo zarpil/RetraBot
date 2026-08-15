@@ -1456,16 +1456,14 @@ async function requireGuildAdmin(req: express.Request, res: express.Response, ne
     } else if (path.includes('/triggers')) {
       requiredModule = 'triggers';
     } else if (path.includes('/config')) {
-      if (req.method === 'GET') {
-        const isAuthorized = await hasModulePermission(member, guildId, 'leveling') ||
-                             await hasModulePermission(member, guildId, 'tempvc') ||
-                             await hasModulePermission(member, guildId, 'clans') ||
-                             await hasModulePermission(member, guildId, 'casino') ||
-                             await hasModulePermission(member, guildId, 'birthdays') ||
-                             await hasModulePermission(member, guildId, 'triggers');
-        if (isAuthorized) {
-          return next();
-        }
+      const isAuthorized = await hasModulePermission(member, guildId, 'leveling') ||
+                           await hasModulePermission(member, guildId, 'tempvc') ||
+                           await hasModulePermission(member, guildId, 'clans') ||
+                           await hasModulePermission(member, guildId, 'casino') ||
+                           await hasModulePermission(member, guildId, 'birthdays') ||
+                           await hasModulePermission(member, guildId, 'triggers');
+      if (isAuthorized) {
+        return next();
       }
       requiredModule = 'admin';
     } else if (path.includes('/structure') || path.includes('/stats') || path.includes('/leaderboard')) {
@@ -1786,7 +1784,7 @@ app.get('/api/guilds/:guildId/structure', requireGuildAdmin, async (req, res) =>
       roles: formattedRoles,
     });
   } catch (err) {
-    res.status(500).json({ error: 'Error al obtener la estructura del servidor.' });
+res.status(500).json({ error: 'Error al obtener la estructura del servidor.' });
   }
 });
 
@@ -1840,6 +1838,22 @@ app.route('/api/guilds/:guildId/config')
 async function handleSaveConfig(req: any, res: any) {
   const { guildId } = req.params;
   if (!isValidSnowflake(guildId)) return res.status(400).json({ error: 'guildId inválido.' });
+
+  const session = getAuthSession(req);
+  const guild = client.guilds.cache.get(guildId);
+  const member = session?.user?.id ? guild?.members.cache.get(session.user.id) || await guild?.members.fetch(session.user.id).catch(() => null) : null;
+
+  if (!member) {
+    return res.status(403).json({ error: '403 Prohibido: No eres miembro de este servidor.' });
+  }
+
+  const hasAdmin = await hasModulePermission(member, guildId, 'admin');
+  const hasLeveling = await hasModulePermission(member, guildId, 'leveling');
+  const hasTempVc = await hasModulePermission(member, guildId, 'tempvc');
+  const hasClans = await hasModulePermission(member, guildId, 'clans');
+  const hasCasino = await hasModulePermission(member, guildId, 'casino');
+  const hasBirthdays = await hasModulePermission(member, guildId, 'birthdays');
+
   const {
     levelingEnabled,
     tempVcEnabled,
@@ -1925,13 +1939,19 @@ async function handleSaveConfig(req: any, res: any) {
     birthdayEnabled,
   } = req.body;
 
-  const config = await prisma.guildConfig.upsert({
-    where: { guildId },
-    update: {
+  const updateData: any = {
+    ...(hasAdmin && {
+      adminRoleIds: typeof adminRoleIds === 'string' ? adminRoleIds : undefined,
+      levelingRoles: typeof levelingRoles === 'string' ? levelingRoles : undefined,
+      tempVcRoles: typeof tempVcRoles === 'string' ? tempVcRoles : undefined,
+      clansRoles: typeof clansRoles === 'string' ? clansRoles : undefined,
+      casinoRoles: typeof casinoRoles === 'string' ? casinoRoles : undefined,
+      birthdaysRoles: typeof birthdaysRoles === 'string' ? birthdaysRoles : undefined,
+      triggersRoles: typeof triggersRoles === 'string' ? triggersRoles : undefined,
+      commandsChannelId,
+    }),
+    ...(hasLeveling && {
       levelingEnabled,
-      tempVcEnabled,
-      clansEnabled: typeof clansEnabled === 'boolean' ? clansEnabled : undefined,
-      tempVcChannelId,
       minXpPerMessage: sanitizeConfigInt(minXpPerMessage, 1, 500),
       maxXpPerMessage: sanitizeConfigInt(maxXpPerMessage, 1, 500),
       xpCooldownSeconds: sanitizeConfigInt(xpCooldownSeconds, 1, 86400),
@@ -1940,16 +1960,24 @@ async function handleSaveConfig(req: any, res: any) {
       levelUpMessage,
       ignoredChannels,
       ignoredRoles,
-      adminRoleIds,
-      levelingRoles: typeof levelingRoles === 'string' ? levelingRoles : undefined,
-      tempVcRoles: typeof tempVcRoles === 'string' ? tempVcRoles : undefined,
-      clansRoles: typeof clansRoles === 'string' ? clansRoles : undefined,
-      casinoRoles: typeof casinoRoles === 'string' ? casinoRoles : undefined,
-      birthdaysRoles: typeof birthdaysRoles === 'string' ? birthdaysRoles : undefined,
-      triggersRoles: typeof triggersRoles === 'string' ? triggersRoles : undefined,
+    }),
+    ...(hasTempVc && {
+      tempVcEnabled,
+      tempVcChannelId,
       verifiedRoleId,
-      seasonWinnerRoleId: seasonWinnerRoleId || null,
-      commandsChannelId,
+    }),
+    ...(hasClans && {
+      clansEnabled: typeof clansEnabled === 'boolean' ? clansEnabled : undefined,
+      clansCategoryId: clansCategoryId || null,
+      clanLeaderRoleId: clanLeaderRoleId || null,
+      monthlyClanHoursGoal: sanitizeConfigInt(monthlyClanHoursGoal, 1, 10000),
+      clanGoalMode: clanGoalMode === 'PER_MEMBER' ? 'PER_MEMBER' : 'FIXED',
+      clanHoursPerMember: sanitizeConfigInt(clanHoursPerMember, 1, 1000),
+      clanCoinsPerHour: typeof clanCoinsPerHour === 'number' && clanCoinsPerHour >= 0 ? clanCoinsPerHour : undefined,
+      clanCurrencyName: typeof clanCurrencyName === 'string' && clanCurrencyName.trim() ? clanCurrencyName.trim() : undefined,
+      clansLogChannelId: clansLogChannelId || null,
+    }),
+    ...(hasCasino && {
       economyEnabled,
       currencySymbol,
       workMinPayout: sanitizeConfigInt(workMinPayout, 0, 100_000_000),
@@ -1962,8 +1990,8 @@ async function handleSaveConfig(req: any, res: any) {
       slutMaxPayout: sanitizeConfigInt(slutMaxPayout, 0, 100_000_000),
       slutCooldownSec: sanitizeConfigInt(slutCooldownSec, 1, 86400),
       robCooldownSec: sanitizeConfigInt(robCooldownSec, 1, 86400),
-      robMinPercent: sanitizeConfigInt(robMinPercent, 1, 100) ?? 20,
-      robMaxPercent: sanitizeConfigInt(robMaxPercent, 1, 100) ?? 80,
+      robMinPercent: sanitizeConfigInt(robMinPercent, 1, 100),
+      robMaxPercent: sanitizeConfigInt(robMaxPercent, 1, 100),
       chickenCost: sanitizeConfigInt(chickenCost, 0, 1_000_000_000),
       piensoCost: sanitizeConfigInt(piensoCost, 0, 1_000_000_000),
       piensoDurationMins: sanitizeConfigInt(piensoDurationMins, 1, 1440),
@@ -1998,102 +2026,111 @@ async function handleSaveConfig(req: any, res: any) {
       casinoLogChannelId,
       slotMachineDifficulty,
       startingBalance: sanitizeConfigInt(startingBalance, 0, 1_000_000_000),
-      clansCategoryId: clansCategoryId || null,
-      clanLeaderRoleId: clanLeaderRoleId || null,
-      monthlyClanHoursGoal: sanitizeConfigInt(monthlyClanHoursGoal, 1, 10000),
-      clanGoalMode: clanGoalMode === 'PER_MEMBER' ? 'PER_MEMBER' : 'FIXED',
-      clanHoursPerMember: sanitizeConfigInt(clanHoursPerMember, 1, 1000) ?? 10,
-      clanCoinsPerHour: typeof clanCoinsPerHour === 'number' && clanCoinsPerHour >= 0 ? clanCoinsPerHour : 0.5,
-      clanCurrencyName: typeof clanCurrencyName === 'string' && clanCurrencyName.trim() ? clanCurrencyName.trim() : 'GloriCoins',
-      clansLogChannelId: clansLogChannelId || null,
+      seasonWinnerRoleId: seasonWinnerRoleId || null,
+    }),
+    ...(hasBirthdays && {
+      birthdayEnabled: typeof birthdayEnabled === 'boolean' ? birthdayEnabled : undefined,
       birthdayRoleId: birthdayRoleId || null,
       birthdayChannelId: birthdayChannelId || null,
       birthdayMessage: typeof birthdayMessage === 'string' ? birthdayMessage : undefined,
-      birthdayEnabled: typeof birthdayEnabled === 'boolean' ? birthdayEnabled : undefined,
-    },
-    create: {
-      guildId,
-      levelingEnabled,
-      tempVcEnabled,
-      clansEnabled: typeof clansEnabled === 'boolean' ? clansEnabled : true,
-      tempVcChannelId,
-      minXpPerMessage: sanitizeConfigInt(minXpPerMessage, 1, 500) ?? 15,
-      maxXpPerMessage: sanitizeConfigInt(maxXpPerMessage, 1, 500) ?? 25,
-      xpCooldownSeconds: sanitizeConfigInt(xpCooldownSeconds, 1, 86400) ?? 60,
-      xpPerMinuteVc: sanitizeConfigInt(xpPerMinuteVc, 0, 1000) ?? 10,
-      levelUpChannelId,
-      levelUpMessage,
-      ignoredChannels,
-      ignoredRoles,
-      adminRoleIds,
-      levelingRoles: typeof levelingRoles === 'string' ? levelingRoles : "",
-      tempVcRoles: typeof tempVcRoles === 'string' ? tempVcRoles : "",
-      clansRoles: typeof clansRoles === 'string' ? clansRoles : "",
-      casinoRoles: typeof casinoRoles === 'string' ? casinoRoles : "",
-      birthdaysRoles: typeof birthdaysRoles === 'string' ? birthdaysRoles : "",
-      triggersRoles: typeof triggersRoles === 'string' ? triggersRoles : "",
-      verifiedRoleId,
-      seasonWinnerRoleId: seasonWinnerRoleId || null,
-      commandsChannelId,
-      economyEnabled,
-      currencySymbol,
-      workMinPayout: sanitizeConfigInt(workMinPayout, 0, 100_000_000) ?? 1000,
-      workMaxPayout: sanitizeConfigInt(workMaxPayout, 0, 100_000_000) ?? 5000,
-      workCooldownSec: sanitizeConfigInt(workCooldownSec, 1, 86400) ?? 30,
-      crimeMinPayout: sanitizeConfigInt(crimeMinPayout, 0, 100_000_000) ?? 1500,
-      crimeMaxPayout: sanitizeConfigInt(crimeMaxPayout, 0, 100_000_000) ?? 5500,
-      crimeCooldownSec: sanitizeConfigInt(crimeCooldownSec, 1, 86400) ?? 30,
-      slutMinPayout: sanitizeConfigInt(slutMinPayout, 0, 100_000_000) ?? 1200,
-      slutMaxPayout: sanitizeConfigInt(slutMaxPayout, 0, 100_000_000) ?? 4700,
-      slutCooldownSec: sanitizeConfigInt(slutCooldownSec, 1, 86400) ?? 30,
-      robCooldownSec: sanitizeConfigInt(robCooldownSec, 1, 86400) ?? 300,
-      chickenCost: sanitizeConfigInt(chickenCost, 0, 1_000_000_000) ?? 5000,
-      piensoCost: sanitizeConfigInt(piensoCost, 0, 1_000_000_000) ?? 3000,
-      piensoDurationMins: sanitizeConfigInt(piensoDurationMins, 1, 1440) ?? 30,
-      piensoBoostPercent: sanitizeConfigInt(piensoBoostPercent, 1, 100) ?? 10,
-      medkitCost: sanitizeConfigInt(medkitCost, 0, 1_000_000_000) ?? 2500,
-      bandageCost: sanitizeConfigInt(bandageCost, 0, 1_000_000_000) ?? 5000,
-      vitaminCost: sanitizeConfigInt(vitaminCost, 0, 1_000_000_000) ?? 2500,
-      vitaminBoostPercent: sanitizeConfigInt(vitaminBoostPercent, 1, 100) ?? 15,
-      cageCost: sanitizeConfigInt(cageCost, 0, 1_000_000_000) ?? 15000,
-      cageCapacityLvl2Cost: sanitizeConfigInt(cageCapacityLvl2Cost, 0, 1_000_000_000) ?? 40000,
-      cageCapacityLvl3Cost: sanitizeConfigInt(cageCapacityLvl3Cost, 0, 1_000_000_000) ?? 80000,
-      cageMuscleLvl1Cost: sanitizeConfigInt(cageMuscleLvl1Cost, 0, 1_000_000_000) ?? 15000,
-      cageMuscleLvl2Cost: sanitizeConfigInt(cageMuscleLvl2Cost, 0, 1_000_000_000) ?? 35000,
-      cageMuscleLvl3Cost: sanitizeConfigInt(cageMuscleLvl3Cost, 0, 1_000_000_000) ?? 70000,
-      cageCardioLvl1Cost: sanitizeConfigInt(cageCardioLvl1Cost, 0, 1_000_000_000) ?? 10000,
-      cageCardioLvl2Cost: sanitizeConfigInt(cageCardioLvl2Cost, 0, 1_000_000_000) ?? 25000,
-      cageCardioLvl3Cost: sanitizeConfigInt(cageCardioLvl3Cost, 0, 1_000_000_000) ?? 50000,
-      cagePhysioLvl1Cost: sanitizeConfigInt(cagePhysioLvl1Cost, 0, 1_000_000_000) ?? 20000,
-      cagePhysioLvl2Cost: sanitizeConfigInt(cagePhysioLvl2Cost, 0, 1_000_000_000) ?? 45000,
-      chickenMinBirthWinRate: sanitizeConfigFloat(chickenMinBirthWinRate, 0, 100) ?? 30.0,
-      chickenMaxBirthWinRate: sanitizeConfigFloat(chickenMaxBirthWinRate, 0, 100) ?? 55.0,
-      chickenInjuryMins: sanitizeConfigInt(chickenInjuryMins, 1, 1440) ?? 5,
-      chickenInjuryChance: sanitizeConfigInt(chickenInjuryChance, 0, 100) ?? 25,
-      chickenNames: typeof chickenNames === 'string' ? chickenNames : undefined,
-      incomeIntervalHours: sanitizeConfigInt(incomeIntervalHours, 1, 720) ?? 3,
-      casinoChannels,
-      workMessages,
-      crimeMessages,
-      crimeFailMessages,
-      slutMessages,
-      slutFailMessages,
-      casinoLogChannelId,
-      slotMachineDifficulty: slotMachineDifficulty || 'NORMAL',
-      startingBalance: sanitizeConfigInt(startingBalance, 0, 1_000_000_000) ?? 1000,
-      clansCategoryId: clansCategoryId || null,
-      clanLeaderRoleId: clanLeaderRoleId || null,
-      monthlyClanHoursGoal: sanitizeConfigInt(monthlyClanHoursGoal, 1, 10000) ?? 50,
-      clanGoalMode: clanGoalMode === 'PER_MEMBER' ? 'PER_MEMBER' : 'FIXED',
-      clanHoursPerMember: sanitizeConfigInt(clanHoursPerMember, 1, 1000) ?? 10,
-      clanCoinsPerHour: typeof clanCoinsPerHour === 'number' && clanCoinsPerHour >= 0 ? clanCoinsPerHour : 0.5,
-      clanCurrencyName: typeof clanCurrencyName === 'string' && clanCurrencyName.trim() ? clanCurrencyName.trim() : 'GloriCoins',
-      clansLogChannelId: clansLogChannelId || null,
-      birthdayRoleId: birthdayRoleId || null,
-      birthdayChannelId: birthdayChannelId || null,
-      birthdayMessage: typeof birthdayMessage === 'string' ? birthdayMessage : "🎉 ¡Feliz cumpleaños {user}! Que pases un gran día.",
-      birthdayEnabled: typeof birthdayEnabled === 'boolean' ? birthdayEnabled : true,
-    },
+    }),
+  };
+
+  const createData: any = {
+    guildId,
+    adminRoleIds: hasAdmin && typeof adminRoleIds === 'string' ? adminRoleIds : "",
+    levelingRoles: hasAdmin && typeof levelingRoles === 'string' ? levelingRoles : "",
+    tempVcRoles: hasAdmin && typeof tempVcRoles === 'string' ? tempVcRoles : "",
+    clansRoles: hasAdmin && typeof clansRoles === 'string' ? clansRoles : "",
+    casinoRoles: hasAdmin && typeof casinoRoles === 'string' ? casinoRoles : "",
+    birthdaysRoles: hasAdmin && typeof birthdaysRoles === 'string' ? birthdaysRoles : "",
+    triggersRoles: hasAdmin && typeof triggersRoles === 'string' ? triggersRoles : "",
+    commandsChannelId: hasAdmin ? commandsChannelId : null,
+
+    levelingEnabled: hasLeveling ? levelingEnabled : true,
+    minXpPerMessage: hasLeveling ? (sanitizeConfigInt(minXpPerMessage, 1, 500) ?? 15) : 15,
+    maxXpPerMessage: hasLeveling ? (sanitizeConfigInt(maxXpPerMessage, 1, 500) ?? 25) : 25,
+    xpCooldownSeconds: hasLeveling ? (sanitizeConfigInt(xpCooldownSeconds, 1, 86400) ?? 60) : 60,
+    xpPerMinuteVc: hasLeveling ? (sanitizeConfigInt(xpPerMinuteVc, 0, 1000) ?? 10) : 10,
+    levelUpChannelId: hasLeveling ? levelUpChannelId : null,
+    levelUpMessage: hasLeveling ? levelUpMessage : "🎉 ¡Enhorabuena {user}! Has subido al **nivel {level}**!",
+    ignoredChannels: hasLeveling ? ignoredChannels : "",
+    ignoredRoles: hasLeveling ? ignoredRoles : "",
+
+    tempVcEnabled: hasTempVc ? tempVcEnabled : true,
+    tempVcChannelId: hasTempVc ? tempVcChannelId : null,
+    verifiedRoleId: hasTempVc ? verifiedRoleId : null,
+
+    clansEnabled: hasClans && typeof clansEnabled === 'boolean' ? clansEnabled : true,
+    clansCategoryId: hasClans ? clansCategoryId : null,
+    clanLeaderRoleId: hasClans ? clanLeaderRoleId : null,
+    monthlyClanHoursGoal: hasClans ? (sanitizeConfigInt(monthlyClanHoursGoal, 1, 10000) ?? 50) : 50,
+    clanGoalMode: hasClans && clanGoalMode === 'PER_MEMBER' ? 'PER_MEMBER' : 'FIXED',
+    clanHoursPerMember: hasClans ? (sanitizeConfigInt(clanHoursPerMember, 1, 1000) ?? 10) : 10,
+    clanCoinsPerHour: hasClans && typeof clanCoinsPerHour === 'number' ? clanCoinsPerHour : 0.5,
+    clanCurrencyName: hasClans && typeof clanCurrencyName === 'string' && clanCurrencyName.trim() ? clanCurrencyName.trim() : 'GloriCoins',
+    clansLogChannelId: hasClans ? clansLogChannelId : null,
+
+    economyEnabled: hasCasino ? economyEnabled : true,
+    currencySymbol: hasCasino ? currencySymbol : "🪙",
+    workMinPayout: hasCasino ? (sanitizeConfigInt(workMinPayout, 0, 100_000_000) ?? 1000) : 1000,
+    workMaxPayout: hasCasino ? (sanitizeConfigInt(workMaxPayout, 0, 100_000_000) ?? 5000) : 5000,
+    workCooldownSec: hasCasino ? (sanitizeConfigInt(workCooldownSec, 1, 86400) ?? 30) : 30,
+    crimeMinPayout: hasCasino ? (sanitizeConfigInt(crimeMinPayout, 0, 100_000_000) ?? 1500) : 1500,
+    crimeMaxPayout: hasCasino ? (sanitizeConfigInt(crimeMaxPayout, 0, 100_000_000) ?? 5500) : 5500,
+    crimeCooldownSec: hasCasino ? (sanitizeConfigInt(crimeCooldownSec, 1, 86400) ?? 30) : 30,
+    slutMinPayout: hasCasino ? (sanitizeConfigInt(slutMinPayout, 0, 100_000_000) ?? 1200) : 1200,
+    slutMaxPayout: hasCasino ? (sanitizeConfigInt(slutMaxPayout, 0, 100_000_000) ?? 4700) : 4700,
+    slutCooldownSec: hasCasino ? (sanitizeConfigInt(slutCooldownSec, 1, 86400) ?? 30) : 30,
+    robCooldownSec: hasCasino ? (sanitizeConfigInt(robCooldownSec, 1, 86400) ?? 300) : 300,
+    robMinPercent: hasCasino ? (sanitizeConfigInt(robMinPercent, 1, 100) ?? 20) : 20,
+    robMaxPercent: hasCasino ? (sanitizeConfigInt(robMaxPercent, 1, 100) ?? 80) : 80,
+    chickenCost: hasCasino ? (sanitizeConfigInt(chickenCost, 0, 1_000_000_000) ?? 5000) : 5000,
+    piensoCost: hasCasino ? (sanitizeConfigInt(piensoCost, 0, 1_000_000_000) ?? 3000) : 3000,
+    piensoDurationMins: hasCasino ? (sanitizeConfigInt(piensoDurationMins, 1, 1440) ?? 30) : 30,
+    piensoBoostPercent: hasCasino ? (sanitizeConfigInt(piensoBoostPercent, 1, 100) ?? 10) : 10,
+    medkitCost: hasCasino ? (sanitizeConfigInt(medkitCost, 0, 1_000_000_000) ?? 2500) : 2500,
+    bandageCost: hasCasino ? (sanitizeConfigInt(bandageCost, 0, 1_000_000_000) ?? 5000) : 5000,
+    vitaminCost: hasCasino ? (sanitizeConfigInt(vitaminCost, 0, 1_000_000_000) ?? 2500) : 2500,
+    vitaminBoostPercent: hasCasino ? (sanitizeConfigInt(vitaminBoostPercent, 1, 100) ?? 15) : 15,
+    cageCost: hasCasino ? (sanitizeConfigInt(cageCost, 0, 1_000_000_000) ?? 15000) : 15000,
+    cageCapacityLvl2Cost: hasCasino ? (sanitizeConfigInt(cageCapacityLvl2Cost, 0, 1_000_000_000) ?? 40000) : 40000,
+    cageCapacityLvl3Cost: hasCasino ? (sanitizeConfigInt(cageCapacityLvl3Cost, 0, 1_000_000_000) ?? 80000) : 80000,
+    cageMuscleLvl1Cost: hasCasino ? (sanitizeConfigInt(cageMuscleLvl1Cost, 0, 1_000_000_000) ?? 15000) : 15000,
+    cageMuscleLvl2Cost: hasCasino ? (sanitizeConfigInt(cageMuscleLvl2Cost, 0, 1_000_000_000) ?? 35000) : 35000,
+    cageMuscleLvl3Cost: hasCasino ? (sanitizeConfigInt(cageMuscleLvl3Cost, 0, 1_000_000_000) ?? 70000) : 70000,
+    cageCardioLvl1Cost: hasCasino ? (sanitizeConfigInt(cageCardioLvl1Cost, 0, 1_000_000_000) ?? 10000) : 10000,
+    cageCardioLvl2Cost: hasCasino ? (sanitizeConfigInt(cageCardioLvl2Cost, 0, 1_000_000_000) ?? 25000) : 25000,
+    cageCardioLvl3Cost: hasCasino ? (sanitizeConfigInt(cageCardioLvl3Cost, 0, 1_000_000_000) ?? 50000) : 50000,
+    cagePhysioLvl1Cost: hasCasino ? (sanitizeConfigInt(cagePhysioLvl1Cost, 0, 1_000_000_000) ?? 20000) : 20000,
+    cagePhysioLvl2Cost: hasCasino ? (sanitizeConfigInt(cagePhysioLvl2Cost, 0, 1_000_000_000) ?? 45000) : 45000,
+    chickenMinBirthWinRate: hasCasino ? (sanitizeConfigFloat(chickenMinBirthWinRate, 0, 100) ?? 30.0) : 30.0,
+    chickenMaxBirthWinRate: hasCasino ? (sanitizeConfigFloat(chickenMaxBirthWinRate, 0, 100) ?? 55.0) : 55.0,
+    chickenInjuryMins: hasCasino ? (sanitizeConfigInt(chickenInjuryMins, 1, 1440) ?? 5) : 5,
+    chickenInjuryChance: hasCasino ? (sanitizeConfigInt(chickenInjuryChance, 0, 100) ?? 25) : 25,
+    chickenNames: hasCasino && typeof chickenNames === 'string' ? chickenNames : undefined,
+    incomeIntervalHours: hasCasino ? (sanitizeConfigInt(incomeIntervalHours, 1, 720) ?? 3) : 3,
+    casinoChannels: hasCasino ? casinoChannels : "",
+    workMessages: hasCasino ? workMessages : "",
+    crimeMessages: hasCasino ? crimeMessages : "",
+    crimeFailMessages: hasCasino ? crimeFailMessages : "",
+    slutMessages: hasCasino ? slutMessages : "",
+    slutFailMessages: hasCasino ? slutFailMessages : "",
+    casinoLogChannelId: hasCasino ? casinoLogChannelId : null,
+    slotMachineDifficulty: hasCasino && slotMachineDifficulty ? slotMachineDifficulty : "NORMAL",
+    startingBalance: hasCasino ? (sanitizeConfigInt(startingBalance, 0, 1_000_000_000) ?? 1000) : 1000,
+    seasonWinnerRoleId: hasCasino ? seasonWinnerRoleId : null,
+
+    birthdayEnabled: hasBirthdays ? birthdayEnabled : true,
+    birthdayRoleId: hasBirthdays ? birthdayRoleId : null,
+    birthdayChannelId: hasBirthdays ? birthdayChannelId : null,
+    birthdayMessage: hasBirthdays ? birthdayMessage : "¡Feliz cumpleaños {user}!",
+  };
+
+  const config = await prisma.guildConfig.upsert({
+    where: { guildId },
+    update: updateData,
+    create: createData,
   });
 
   res.json({ success: true, config });
