@@ -75,6 +75,7 @@ client.on(Events.ClientReady, async (c) => {
   setEconomyClient(c);
   setClansClient(c);
   setCustomTriggersClient(c);
+  console.log('🔑 Modelos de Prisma disponibles:', Object.keys(prisma).filter(k => !k.startsWith('_')));
 
   // Start background monthly scheduler & run check
   startMonthlyScheduler(c);
