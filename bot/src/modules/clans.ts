@@ -697,17 +697,47 @@ export async function handleClanCommand(message: Message) {
   const isLeader = Boolean(userClan) || (config?.clanLeaderRoleId && member.roles.cache.has(config.clanLeaderRoleId));
 
   if (!isLeader && !isStaff) {
-    const memberRecord = await prisma.clanMember.findFirst({
+    const memberRecords = await prisma.clanMember.findMany({
       where: { guildId, userId },
     });
 
-    if (memberRecord) {
+    if (memberRecords.length === 0) {
+      return message.reply('❌ Este comando solo está disponible para miembros de un clan, Líderes de Clan o Staff del Servidor.');
+    }
+
+    if (memberRecords.length === 1) {
       const clan = await prisma.clan.findUnique({
-        where: { id: memberRecord.clanId }
+        where: { id: memberRecords[0].clanId }
       });
       if (clan) {
         const statsEmbed = await buildClanStatsEmbed(guildId, clan);
         return message.reply({ embeds: [statsEmbed] });
+      }
+    } else {
+      // User is in multiple clans (+1) -> Show dropdown selection
+      const clanes = await prisma.clan.findMany({
+        where: {
+          id: { in: memberRecords.map(m => m.clanId) }
+        }
+      });
+
+      if (clanes.length > 0) {
+        const select = new StringSelectMenuBuilder()
+          .setCustomId(`clan_selectmemberstats_${userId}`)
+          .setPlaceholder('Elige un clan para ver sus estadísticas...')
+          .addOptions(
+            clanes.map(c => ({
+              label: c.name,
+              value: c.id,
+              description: `Ver reporte de horas de ${c.name}`
+            }))
+          );
+
+        const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select);
+        return message.reply({
+          content: 'ℹ️ **Perteneces a varios clanes.** Selecciona cuál deseas consultar:',
+          components: [row]
+        });
       }
     }
 
@@ -796,6 +826,28 @@ export async function handleClanInteraction(interaction: any) {
 
   const parts = customId.split('_'); // e.g. ['clan', 'addmember', clanId, ownerId]
   const action = parts[1];
+
+  // Handle select member stats first (does not follow standard signature)
+  if (action === 'selectmemberstats') {
+    const targetUserId = parts[2];
+    if (user.id !== targetUserId) {
+      return interaction.reply({ content: '❌ Solo el usuario que ejecutó el comando puede usar este menú.', ephemeral: true });
+    }
+
+    const selectedClanId = interaction.values[0];
+    const targetClan = await prisma.clan.findUnique({ where: { id: selectedClanId } });
+    if (!targetClan) {
+      return interaction.reply({ content: '❌ El clan seleccionado ya no existe.', ephemeral: true });
+    }
+
+    const statsEmbed = await buildClanStatsEmbed(guild.id, targetClan);
+    return interaction.update({
+      content: `📊 Aquí tienes el reporte de **${targetClan.name}**:`,
+      embeds: [statsEmbed],
+      components: [],
+    });
+  }
+
   const clanId = parts[2];
   const ownerId = parts[3];
 
