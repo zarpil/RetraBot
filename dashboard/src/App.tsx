@@ -711,6 +711,72 @@ export default function App() {
   const currentGuild = guilds.find(g => g.id === selectedGuild);
   const unlinkedChannels = structure.voiceChannels.filter(vc => !clans.some(c => c.voiceChannelId === vc.id));
 
+  // Si está autenticado pero no tiene permisos en ningún servidor
+  if (authUser && guilds.length === 0 && isOnline) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        background: '#090a0c',
+        color: '#fff',
+        fontFamily: 'system-ui, sans-serif',
+        padding: 20
+      }}>
+        <div style={{
+          background: 'rgba(231, 76, 60, 0.05)',
+          border: '1px solid rgba(231, 76, 60, 0.3)',
+          borderRadius: 16,
+          padding: 40,
+          maxWidth: 480,
+          width: '100%',
+          textAlign: 'center',
+          boxShadow: '0 20px 40px rgba(0,0,0,0.5)'
+        }}>
+          <div style={{ fontSize: 54, marginBottom: 16 }}>🚫</div>
+          <h1 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 12px 0', color: '#e74c3c' }}>Acceso Denegado</h1>
+          <p style={{ fontSize: 14, color: '#bbb', margin: '0 0 20px 0', lineHeight: 1.6 }}>
+            Hola <strong>{authUser.username}</strong>. Tu cuenta no cuenta con permisos de <strong>Administrador</strong> ni ningún rol de <strong>Staff autorizado</strong> en los servidores configurados.
+          </p>
+          <div style={{
+            background: 'rgba(0, 0, 0, 0.4)',
+            borderRadius: 8,
+            padding: 12,
+            fontSize: 13,
+            color: '#888',
+            marginBottom: 24
+          }}>
+            Si crees que esto es un error, solicita a un Administrador que te asigne el rol correspondiente en Discord y en los Ajustes del panel.
+          </div>
+          <button
+            onClick={handleLogout}
+            style={{
+              background: '#e74c3c',
+              color: '#fff',
+              border: 'none',
+              padding: '12px 24px',
+              borderRadius: 8,
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              justifyContent: 'center',
+              width: '100%',
+              boxShadow: '0 4px 14px rgba(231, 76, 60, 0.4)',
+              transition: 'background 0.2s'
+            }}
+          >
+            Cerrar Sesión
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Render Pantalla de Inicio de Sesión si no está autenticado
   if (!authUser) {
     return (

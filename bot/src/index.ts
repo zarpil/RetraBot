@@ -1615,6 +1615,12 @@ app.post('/api/auth/callback', authLimiter, async (req, res) => {
         avatarUrl,
       };
 
+      if (adminGuildIds.length === 0) {
+        return res.status(403).json({
+          error: 'Acceso Denegado: Tu cuenta de Discord no tiene permisos de Administrador ni roles de Staff asignados en ningún servidor del bot.'
+        });
+      }
+
       const sessionToken = 'sess_' + crypto.randomBytes(32).toString('hex');
       const sessionObj: AuthSession = {
         token: sessionToken,
