@@ -48,6 +48,48 @@ function getYearMonthString(date = new Date()): string {
   return `${year}-${month}`;
 }
 
+// Helper to generate the monthly stats embed for a clan
+async function buildClanStatsEmbed(guildId: string, clan: any) {
+  const config = await prisma.guildConfig.findUnique({ where: { guildId } });
+  const yearMonth = getYearMonthString();
+  const members = await prisma.clanMember.findMany({ where: { clanId: clan.id } });
+
+  const goalMode = config?.clanGoalMode || 'FIXED';
+  const goalHours = goalMode === 'PER_MEMBER'
+    ? (members.length * (config?.clanHoursPerMember ?? 10))
+    : (config?.monthlyClanHoursGoal ?? 50);
+
+  const stats = await prisma.clanMemberMonthlyStats.findMany({
+    where: { clanId: clan.id, yearMonth },
+  });
+
+  const totalSeconds = stats.reduce((acc, s) => acc + s.secondsSpent, 0);
+  const totalHours = (totalSeconds / 3600).toFixed(1);
+  const remainingHours = Math.max(0, goalHours - (totalSeconds / 3600)).toFixed(1);
+
+  let memberLines = '';
+  if (members.length === 0) {
+    memberLines = '*No hay miembros registrados.*';
+  } else {
+    const statsMap = new Map(stats.map(s => [s.userId, s.secondsSpent]));
+    memberLines = members.map(m => {
+      const secs = statsMap.get(m.userId) || 0;
+      const hrs = (secs / 3600).toFixed(1);
+      return `• <@${m.userId}> ➔ **${hrs}h** en voz`;
+    }).join('\n');
+  }
+
+  const shieldsText = clan.immunityShields > 0
+    ? `🧊 **Escudos de Inmunidad (Hielitos)**: **${clan.immunityShields}/3 activos** (Protegido contra borrados)`
+    : `🧊 **Escudos de Inmunidad (Hielitos)**: **0/3 activos** (Sin protección activa)`;
+
+  return new EmbedBuilder()
+    .setTitle(`📊 REPORTE DE HORAS MENSUALES — ${clan.name}`)
+    .setColor(clan.colorHex as any || 0x5865F2)
+    .setDescription(`📅 **Mes Actual**: \`${yearMonth}\`\n🎯 **Meta Mensual del Clan**: **${goalHours}h**\n⏱️ **Horas Acumuladas**: **${totalHours}h** / **${goalHours}h**\n⏳ **Horas Restantes**: **${remainingHours}h**\n${shieldsText}\n💰 **Saldo ${config?.clanCurrencyName || 'GloriCoins'}**: **${clan.coins.toFixed(1)}**\n\n👥 **DESGLOSE POR MIEMBRO:**\n${memberLines}`)
+    .setFooter({ text: `Estado: ${parseFloat(totalHours) >= goalHours ? '✅ Meta Cumplida' : clan.immunityShields > 0 ? '🧊 Protegido con Hielito' : '⚠️ En Progreso'}` });
+}
+
 /**
  * Helper to process (award) accumulated voice time for a user in a clan VC.
  */
@@ -639,7 +681,21 @@ export async function handleClanCommand(message: Message) {
   const isLeader = Boolean(userClan) || (config?.clanLeaderRoleId && member.roles.cache.has(config.clanLeaderRoleId));
 
   if (!isLeader && !isStaff) {
-    return message.reply('❌ Este comando solo está disponible para **Líderes de Clan** o **Staff del Servidor**.');
+    const memberRecord = await prisma.clanMember.findFirst({
+      where: { guildId, userId },
+    });
+
+    if (memberRecord) {
+      const clan = await prisma.clan.findUnique({
+        where: { id: memberRecord.clanId }
+      });
+      if (clan) {
+        const statsEmbed = await buildClanStatsEmbed(guildId, clan);
+        return message.reply({ embeds: [statsEmbed] });
+      }
+    }
+
+    return message.reply('❌ Este comando solo está disponible para miembros de un clan, Líderes de Clan o Staff del Servidor.');
   }
 
   // Target clan: user's own clan or if staff ran command without a clan, prompt
@@ -747,38 +803,7 @@ export async function handleClanInteraction(interaction: any) {
 
   // 1. STATS BUTTON
   if (action === 'stats') {
-    const stats = await prisma.clanMemberMonthlyStats.findMany({
-      where: { clanId: clan.id, yearMonth },
-    });
-
-    const totalSeconds = stats.reduce((acc, s) => acc + s.secondsSpent, 0);
-    const totalHours = (totalSeconds / 3600).toFixed(1);
-    const remainingHours = Math.max(0, goalHours - (totalSeconds / 3600)).toFixed(1);
-
-    const members = await prisma.clanMember.findMany({ where: { clanId: clan.id } });
-
-    let memberLines = '';
-    if (members.length === 0) {
-      memberLines = '*No hay miembros registrados.*';
-    } else {
-      const statsMap = new Map(stats.map(s => [s.userId, s.secondsSpent]));
-      memberLines = members.map(m => {
-        const secs = statsMap.get(m.userId) || 0;
-        const hrs = (secs / 3600).toFixed(1);
-        return `• <@${m.userId}> ➔ **${hrs}h** en voz`;
-      }).join('\n');
-    }
-
-    const shieldsText = clan.immunityShields > 0
-      ? `🧊 **Escudos de Inmunidad (Hielitos)**: **${clan.immunityShields}/3 activos** (Protegido contra borrados)`
-      : `🧊 **Escudos de Inmunidad (Hielitos)**: **0/3 activos** (Sin protección activa)`;
-
-    const statsEmbed = new EmbedBuilder()
-      .setTitle(`📊 REPORTE DE HORAS MENSUALES — ${clan.name}`)
-      .setColor(clan.colorHex as any || 0x5865F2)
-      .setDescription(`📅 **Mes Actual**: \`${yearMonth}\`\n🎯 **Meta Mensual del Clan**: **${goalHours}h**\n⏱️ **Horas Acumuladas**: **${totalHours}h** / **${goalHours}h**\n⏳ **Horas Restantes**: **${remainingHours}h**\n${shieldsText}\n💰 **Saldo GloriCoins**: **${clan.coins.toFixed(1)}**\n\n👥 **DESGLOSE POR MIEMBRO:**\n${memberLines}`)
-      .setFooter({ text: `Estado: ${parseFloat(totalHours) >= goalHours ? '✅ Meta Cumplida' : clan.immunityShields > 0 ? '🧊 Protegido con Hielito' : '⚠️ En Progreso'}` });
-
+    const statsEmbed = await buildClanStatsEmbed(guild.id, clan);
     return interaction.reply({ embeds: [statsEmbed], ephemeral: true });
   }
 
