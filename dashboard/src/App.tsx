@@ -300,6 +300,7 @@ export default function App() {
 
   // Carga inicial de servidores
   useEffect(() => {
+    if (!authUser) return;
     const fetchGuilds = async () => {
       try {
         const res = await authFetch(`${API_BASE}/api/guilds`);
@@ -322,7 +323,7 @@ export default function App() {
 
   // Carga de datos de un servidor seleccionado
   const fetchGuildData = async (gId: string) => {
-    if (!gId) return;
+    if (!gId || !authUser) return;
     try {
       const [cfgRes, stRes, lbRes, structRes, econRes, clansRes, shopRes] = await Promise.all([
         authFetch(`${API_BASE}/api/guilds/${gId}/config`),
@@ -354,7 +355,7 @@ export default function App() {
   };
 
   const fetchClans = async () => {
-    if (!selectedGuild) return;
+    if (!selectedGuild || !authUser) return;
     try {
       const res = await authFetch(`${API_BASE}/api/guilds/${selectedGuild}/clans`);
       if (res.ok) setClans(await res.json());
@@ -367,10 +368,10 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (selectedGuild) {
+    if (selectedGuild && authUser) {
       fetchGuildData(selectedGuild);
     }
-  }, [selectedGuild]);
+  }, [selectedGuild, authUser]);
 
   // Guardar Configuración de un servidor
   const handleSave = async (e: React.FormEvent) => {
