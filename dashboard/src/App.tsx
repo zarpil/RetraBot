@@ -299,6 +299,10 @@ export default function App() {
         if (res.ok) {
           const data = await res.json();
           setLeaderSearchResults(data);
+          if (/^\d{17,20}$/.test(leaderSearchQuery.trim()) && data.length === 1) {
+            setSelectedLeaderUser(data[0]);
+            setNewClanLeaderId(data[0].id);
+          }
         }
       } catch (e) {
         console.error('Error buscando miembro para líder:', e);

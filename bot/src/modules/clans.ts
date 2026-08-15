@@ -247,21 +247,40 @@ export async function createClanInDiscordAndDB(
   }
   await leaderMember.roles.add(clanRole.id).catch(() => null);
 
-  // 3. Create Clan Voice Channel
+  // 3. Create Clan Voice Channel (inheriting parent category permission overwrites)
+  const permissionOverwrites = categoryChannel.permissionOverwrites.cache.map(o => ({
+    id: o.id,
+    type: o.type,
+    allow: o.allow.bitfield,
+    deny: o.deny.bitfield,
+  }));
+
+  // Deny connect for @everyone (maintain views or other allowed flags)
+  const everyoneOverwrite = permissionOverwrites.find(o => o.id === guild.id);
+  if (everyoneOverwrite) {
+    everyoneOverwrite.deny = BigInt(everyoneOverwrite.deny) | PermissionFlagsBits.Connect;
+  } else {
+    permissionOverwrites.push({
+      id: guild.id,
+      type: 0, // Role
+      allow: 0n,
+      deny: PermissionFlagsBits.Connect,
+    });
+  }
+
+  // Allow Connect, Speak, ViewChannel for the specific Clan Role
+  permissionOverwrites.push({
+    id: clanRole.id,
+    type: 0, // Role
+    allow: PermissionFlagsBits.Connect | PermissionFlagsBits.Speak | PermissionFlagsBits.ViewChannel,
+    deny: 0n,
+  });
+
   const voiceChannel = await guild.channels.create({
     name: name.trim(),
     type: ChannelType.GuildVoice,
     parent: config.clansCategoryId,
-    permissionOverwrites: [
-      {
-        id: guild.id, // @everyone
-        deny: [PermissionFlagsBits.Connect],
-      },
-      {
-        id: clanRole.id, // Clan Role
-        allow: [PermissionFlagsBits.Connect, PermissionFlagsBits.Speak, PermissionFlagsBits.ViewChannel],
-      },
-    ],
+    permissionOverwrites,
   });
 
   // 4. Save Clan & Leader in DB
