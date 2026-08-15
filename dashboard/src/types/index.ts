@@ -233,6 +233,7 @@ export interface CustomTrigger {
   response: string;
   responseType: string; // 'TEXT' or 'EMBED'
   requiredRoleId?: string | null;
+  ignoredRoleId?: string | null;
   targetChannelId?: string | null;
   cooldown: number;
   createdAt?: string;

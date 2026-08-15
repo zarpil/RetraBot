@@ -38,10 +38,16 @@ export async function handleCustomTriggers(message: Message) {
   if (!matchedTrigger) return;
 
   // Check role requirement if configured
-  if (matchedTrigger.requiredRoleId) {
+  if (matchedTrigger.requiredRoleId || matchedTrigger.ignoredRoleId) {
     const member = message.member || await message.guild.members.fetch(message.author.id).catch(() => null);
-    if (!member || !member.roles.cache.has(matchedTrigger.requiredRoleId)) {
-      // User doesn't have the required role, ignore silently (or optionally reply, but silently is standard)
+    
+    // Check required role
+    if (matchedTrigger.requiredRoleId && (!member || !member.roles.cache.has(matchedTrigger.requiredRoleId))) {
+      return;
+    }
+    
+    // Check ignored/excluded role
+    if (matchedTrigger.ignoredRoleId && member && member.roles.cache.has(matchedTrigger.ignoredRoleId)) {
       return;
     }
   }

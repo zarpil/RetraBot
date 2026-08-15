@@ -26,6 +26,7 @@ export const CustomTriggersSettings: React.FC<CustomTriggersSettingsProps> = ({
   const [responseType, setResponseType] = useState<'TEXT' | 'EMBED'>('TEXT');
   const [cooldown, setCooldown] = useState(0);
   const [requiredRoleId, setRequiredRoleId] = useState('');
+  const [ignoredRoleId, setIgnoredRoleId] = useState('');
   const [targetChannelId, setTargetChannelId] = useState('');
 
   // Response parts (text or parsed embed fields)
@@ -67,6 +68,7 @@ export const CustomTriggersSettings: React.FC<CustomTriggersSettingsProps> = ({
     setTextResponse('');
     setCooldown(0);
     setRequiredRoleId('');
+    setIgnoredRoleId('');
     setTargetChannelId('');
     setEmbedTitle('');
     setEmbedDesc('');
@@ -84,6 +86,7 @@ export const CustomTriggersSettings: React.FC<CustomTriggersSettingsProps> = ({
     setResponseType(t.responseType as 'TEXT' | 'EMBED');
     setCooldown(t.cooldown);
     setRequiredRoleId(t.requiredRoleId || '');
+    setIgnoredRoleId(t.ignoredRoleId || '');
     setTargetChannelId(t.targetChannelId || '');
 
     if (t.responseType === 'EMBED') {
@@ -173,6 +176,7 @@ export const CustomTriggersSettings: React.FC<CustomTriggersSettingsProps> = ({
       response: finalResponse,
       responseType,
       requiredRoleId: requiredRoleId || null,
+      ignoredRoleId: ignoredRoleId || null,
       targetChannelId: targetChannelId || null,
       cooldown: Number(cooldown) || 0
     };
@@ -401,6 +405,20 @@ export const CustomTriggersSettings: React.FC<CustomTriggersSettingsProps> = ({
               </div>
 
               <div className="field split-col">
+                <label>Cooldown (Segundos)</label>
+                <input
+                  type="number"
+                  min="0"
+                  placeholder="Sin Cooldown"
+                  value={cooldown}
+                  onChange={e => setCooldown(Number(e.target.value))}
+                />
+                <span className="hint">Tiempo mínimo de espera por usuario antes de volver a usarlo.</span>
+              </div>
+            </div>
+
+            <div className="split-row" style={{ gap: 20 }}>
+              <div className="field split-col">
                 <label>Rol Requerido (Opcional)</label>
                 <select
                   value={requiredRoleId}
@@ -415,15 +433,17 @@ export const CustomTriggersSettings: React.FC<CustomTriggersSettingsProps> = ({
               </div>
 
               <div className="field split-col">
-                <label>Cooldown (Segundos)</label>
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="Sin Cooldown"
-                  value={cooldown}
-                  onChange={e => setCooldown(Number(e.target.value))}
-                />
-                <span className="hint">Tiempo mínimo de espera por usuario antes de volver a usarlo.</span>
+                <label>Rol Excluido (Opcional)</label>
+                <select
+                  value={ignoredRoleId}
+                  onChange={e => setIgnoredRoleId(e.target.value)}
+                >
+                  <option value="">Ninguno (Sin excluir roles)</option>
+                  {structure.roles && structure.roles.map(r => (
+                    <option key={r.id} value={r.id}>@{r.name}</option>
+                  ))}
+                </select>
+                <span className="hint">Los miembros con este rol NO podrán usar el disparador.</span>
               </div>
             </div>
 
@@ -465,7 +485,7 @@ export const CustomTriggersSettings: React.FC<CustomTriggersSettingsProps> = ({
                     <th style={{ padding: 12, color: 'var(--txt-3)' }}>Disparador</th>
                     <th style={{ padding: 12, color: 'var(--txt-3)' }}>Tipo</th>
                     <th style={{ padding: 12, color: 'var(--txt-3)' }}>Canal Destino</th>
-                    <th style={{ padding: 12, color: 'var(--txt-3)' }}>Rol Requerido</th>
+                    <th style={{ padding: 12, color: 'var(--txt-3)' }}>Roles (Req / Excl)</th>
                     <th style={{ padding: 12, color: 'var(--txt-3)' }}>Cooldown</th>
                     <th style={{ padding: 12, textAlign: 'right', color: 'var(--txt-3)' }}>Acciones</th>
                   </tr>
@@ -473,6 +493,7 @@ export const CustomTriggersSettings: React.FC<CustomTriggersSettingsProps> = ({
                 <tbody>
                   {triggers.map(t => {
                     const requiredRole = structure.roles?.find(r => r.id === t.requiredRoleId);
+                    const ignoredRole = structure.roles?.find(r => r.id === t.ignoredRoleId);
                     const targetChan = structure.textChannels?.find(c => c.id === t.targetChannelId);
 
                     return (
@@ -496,13 +517,21 @@ export const CustomTriggersSettings: React.FC<CustomTriggersSettingsProps> = ({
                           {targetChan ? `#${targetChan.name}` : <em style={{ opacity: 0.5 }}>Origen</em>}
                         </td>
                         <td style={{ padding: 12 }}>
-                          {requiredRole ? (
-                            <span style={{ color: requiredRole.color || '#fff', fontWeight: 600 }}>
-                              @{requiredRole.name}
-                            </span>
-                          ) : (
-                            <span style={{ opacity: 0.4 }}>Ninguno</span>
-                          )}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            {requiredRole ? (
+                              <span style={{ color: requiredRole.color || '#fff', fontSize: 12 }}>
+                                🟢 Req: <strong>@{requiredRole.name}</strong>
+                              </span>
+                            ) : null}
+                            {ignoredRole ? (
+                              <span style={{ color: '#e74c3c', fontSize: 12 }}>
+                                🔴 Excl: <strong>@{ignoredRole.name}</strong>
+                              </span>
+                            ) : null}
+                            {!requiredRole && !ignoredRole ? (
+                              <span style={{ opacity: 0.4 }}>Ninguno</span>
+                            ) : null}
+                          </div>
                         </td>
                         <td style={{ padding: 12, color: 'var(--txt-2)' }}>
                           {t.cooldown > 0 ? (

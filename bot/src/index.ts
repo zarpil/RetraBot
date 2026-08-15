@@ -2525,7 +2525,7 @@ app.post('/api/guilds/:guildId/triggers', requireGuildAdmin, async (req, res) =>
   const { guildId } = req.params;
   if (!isValidSnowflake(guildId)) return res.status(400).json({ error: 'guildId inválido.' });
 
-  const { trigger, response, responseType, requiredRoleId, targetChannelId, cooldown } = req.body;
+  const { trigger, response, responseType, requiredRoleId, ignoredRoleId, targetChannelId, cooldown } = req.body;
 
   if (!trigger || !response) {
     return res.status(400).json({ error: 'Trigger y response son requeridos.' });
@@ -2539,6 +2539,7 @@ app.post('/api/guilds/:guildId/triggers', requireGuildAdmin, async (req, res) =>
         response: response,
         responseType: responseType === 'EMBED' ? 'EMBED' : 'TEXT',
         requiredRoleId: requiredRoleId || null,
+        ignoredRoleId: ignoredRoleId || null,
         targetChannelId: targetChannelId || null,
         cooldown: typeof cooldown === 'number' ? Math.max(0, cooldown) : 0,
       },
@@ -2554,7 +2555,7 @@ app.put('/api/guilds/:guildId/triggers/:triggerId', requireGuildAdmin, async (re
   const { guildId, triggerId } = req.params;
   if (!isValidSnowflake(guildId)) return res.status(400).json({ error: 'guildId inválido.' });
 
-  const { trigger, response, responseType, requiredRoleId, targetChannelId, cooldown } = req.body;
+  const { trigger, response, responseType, requiredRoleId, ignoredRoleId, targetChannelId, cooldown } = req.body;
 
   try {
     const updatedTrigger = await prisma.customTrigger.update({
@@ -2564,6 +2565,7 @@ app.put('/api/guilds/:guildId/triggers/:triggerId', requireGuildAdmin, async (re
         ...(response !== undefined && { response }),
         ...(responseType && { responseType: responseType === 'EMBED' ? 'EMBED' : 'TEXT' }),
         requiredRoleId: requiredRoleId === undefined ? undefined : (requiredRoleId || null),
+        ignoredRoleId: ignoredRoleId === undefined ? undefined : (ignoredRoleId || null),
         targetChannelId: targetChannelId === undefined ? undefined : (targetChannelId || null),
         ...(typeof cooldown === 'number' && { cooldown: Math.max(0, cooldown) }),
       },
