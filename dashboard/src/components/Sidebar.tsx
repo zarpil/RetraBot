@@ -75,7 +75,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           .filter(([id]) => {
             if (!permissions) return true;
             if (id === 'dashboard' || id === 'leaderboard') return true;
-            // Map 'tempvc' to 'tempvc' permission
+            if (id === 'general') return permissions.admin;
             return permissions[id as keyof GuildPermissions] || false;
           })
           .map(([id, label, icon]) => (
