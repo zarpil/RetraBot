@@ -257,6 +257,14 @@ export async function createClanInDiscordAndDB(
   const guild = client.guilds.cache.get(guildId);
   if (!guild) throw new Error('Servidor no encontrado.');
 
+  // Enforce that a user can only lead 1 clan at a time
+  const existingLedClan = await prisma.clan.findFirst({
+    where: { leaderId }
+  });
+  if (existingLedClan) {
+    throw new Error(`Este usuario ya es líder del clan "${existingLedClan.name}". Un usuario solo puede ser líder de un clan a la vez.`);
+  }
+
   const config = await prisma.guildConfig.findUnique({ where: { guildId } });
   if (!config?.clansCategoryId) {
     throw new Error('Debes configurar la Categoría de Clanes en la pestaña de Ajustes antes de crear un clan.');
@@ -370,6 +378,14 @@ export async function importClanToDB(
 ) {
   const guild = client.guilds.cache.get(guildId);
   if (!guild) throw new Error('Servidor no encontrado.');
+
+  // Enforce that a user can only lead 1 clan at a time
+  const existingLedClan = await prisma.clan.findFirst({
+    where: { leaderId }
+  });
+  if (existingLedClan) {
+    throw new Error(`Este usuario ya es líder del clan "${existingLedClan.name}". Un usuario solo puede ser líder de un clan a la vez.`);
+  }
 
   const config = await prisma.guildConfig.findUnique({ where: { guildId } });
 
