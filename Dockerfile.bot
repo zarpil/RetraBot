@@ -43,4 +43,4 @@ COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE 48931
 
-CMD ["sh", "-c", "npx prisma db push --schema=./shared/prisma/schema.prisma && node bot/dist/index.js"]
+CMD ["sh", "-c", "rm -rf shared/node_modules && npx prisma db push --schema=./shared/prisma/schema.prisma && node bot/dist/index.js"]
