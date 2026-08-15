@@ -1902,8 +1902,8 @@ export async function handlePrefixEconomyCommands(message: Message) {
     return message.reply(res);
   }
 
-  // 21. Top Money (!top / !baltop / !richest)
-  if (['top', 'baltop', 'richest', 'top-dinero', 'top-money', 'topmoney', 'topdinero'].includes(cmd)) {
+  // 21. Top Money (!top / !baltop / !richest / !lb / !leaderboard)
+  if (['top', 'baltop', 'richest', 'top-dinero', 'top-money', 'topmoney', 'topdinero', 'lb', 'leaderboard'].includes(cmd)) {
     const res = await handleTopMoney(guildId, message.member);
     return sendWithAutoExpire(res);
   }
