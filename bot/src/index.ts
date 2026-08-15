@@ -2530,7 +2530,7 @@ app.post('/api/guilds/:guildId/triggers', requireGuildAdmin, async (req, res) =>
   const { guildId } = req.params;
   if (!isValidSnowflake(guildId)) return res.status(400).json({ error: 'guildId inválido.' });
 
-  const { trigger, response, responseType, requiredRoleId, ignoredRoleId, targetChannelId, cooldown } = req.body;
+  const { trigger, response, responseType, requiredRoleId, ignoredRoleId, allowedChannels, ignoredChannels, targetChannelId, cooldown } = req.body;
 
   if (!trigger || !response) {
     return res.status(400).json({ error: 'Trigger y response son requeridos.' });
@@ -2545,6 +2545,8 @@ app.post('/api/guilds/:guildId/triggers', requireGuildAdmin, async (req, res) =>
         responseType: responseType === 'EMBED' ? 'EMBED' : 'TEXT',
         requiredRoleId: requiredRoleId || null,
         ignoredRoleId: ignoredRoleId || null,
+        allowedChannels: typeof allowedChannels === 'string' ? allowedChannels : "",
+        ignoredChannels: typeof ignoredChannels === 'string' ? ignoredChannels : "",
         targetChannelId: targetChannelId || null,
         cooldown: typeof cooldown === 'number' ? Math.max(0, cooldown) : 0,
       },
@@ -2560,7 +2562,7 @@ app.put('/api/guilds/:guildId/triggers/:triggerId', requireGuildAdmin, async (re
   const { guildId, triggerId } = req.params;
   if (!isValidSnowflake(guildId)) return res.status(400).json({ error: 'guildId inválido.' });
 
-  const { trigger, response, responseType, requiredRoleId, ignoredRoleId, targetChannelId, cooldown } = req.body;
+  const { trigger, response, responseType, requiredRoleId, ignoredRoleId, allowedChannels, ignoredChannels, targetChannelId, cooldown } = req.body;
 
   try {
     const updatedTrigger = await prisma.customTrigger.update({
@@ -2571,6 +2573,8 @@ app.put('/api/guilds/:guildId/triggers/:triggerId', requireGuildAdmin, async (re
         ...(responseType && { responseType: responseType === 'EMBED' ? 'EMBED' : 'TEXT' }),
         requiredRoleId: requiredRoleId === undefined ? undefined : (requiredRoleId || null),
         ignoredRoleId: ignoredRoleId === undefined ? undefined : (ignoredRoleId || null),
+        ...(allowedChannels !== undefined && { allowedChannels: typeof allowedChannels === 'string' ? allowedChannels : "" }),
+        ...(ignoredChannels !== undefined && { ignoredChannels: typeof ignoredChannels === 'string' ? ignoredChannels : "" }),
         targetChannelId: targetChannelId === undefined ? undefined : (targetChannelId || null),
         ...(typeof cooldown === 'number' && { cooldown: Math.max(0, cooldown) }),
       },

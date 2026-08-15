@@ -27,6 +27,8 @@ export const CustomTriggersSettings: React.FC<CustomTriggersSettingsProps> = ({
   const [cooldown, setCooldown] = useState(0);
   const [requiredRoleId, setRequiredRoleId] = useState('');
   const [ignoredRoleId, setIgnoredRoleId] = useState('');
+  const [allowedChannels, setAllowedChannels] = useState<string[]>([]);
+  const [ignoredChannels, setIgnoredChannels] = useState<string[]>([]);
   const [targetChannelId, setTargetChannelId] = useState('');
 
   // Response parts (text or parsed embed fields)
@@ -69,6 +71,8 @@ export const CustomTriggersSettings: React.FC<CustomTriggersSettingsProps> = ({
     setCooldown(0);
     setRequiredRoleId('');
     setIgnoredRoleId('');
+    setAllowedChannels([]);
+    setIgnoredChannels([]);
     setTargetChannelId('');
     setEmbedTitle('');
     setEmbedDesc('');
@@ -87,6 +91,8 @@ export const CustomTriggersSettings: React.FC<CustomTriggersSettingsProps> = ({
     setCooldown(t.cooldown);
     setRequiredRoleId(t.requiredRoleId || '');
     setIgnoredRoleId(t.ignoredRoleId || '');
+    setAllowedChannels(t.allowedChannels ? t.allowedChannels.split(',').map(x => x.trim()).filter(Boolean) : []);
+    setIgnoredChannels(t.ignoredChannels ? t.ignoredChannels.split(',').map(x => x.trim()).filter(Boolean) : []);
     setTargetChannelId(t.targetChannelId || '');
 
     if (t.responseType === 'EMBED') {
@@ -177,6 +183,8 @@ export const CustomTriggersSettings: React.FC<CustomTriggersSettingsProps> = ({
       responseType,
       requiredRoleId: requiredRoleId || null,
       ignoredRoleId: ignoredRoleId || null,
+      allowedChannels: allowedChannels.join(','),
+      ignoredChannels: ignoredChannels.join(','),
       targetChannelId: targetChannelId || null,
       cooldown: Number(cooldown) || 0
     };
@@ -447,6 +455,94 @@ export const CustomTriggersSettings: React.FC<CustomTriggersSettingsProps> = ({
               </div>
             </div>
 
+            <div className="split-row" style={{ gap: 20 }}>
+              <div className="field split-col">
+                <label>Canales/Categorías Permitidos (Opcional)</label>
+                <div className="tag-group" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                  {allowedChannels.map(chId => {
+                    const textCh = structure.textChannels?.find(c => c.id === chId);
+                    const catCh = structure.categories?.find(c => c.id === chId);
+                    const labelName = textCh ? `# ${textCh.name}` : catCh ? `📁 ${catCh.name}` : `ID: ${chId}`;
+                    return (
+                      <span className="tag-chip" key={chId} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', backgroundColor: 'rgba(52, 152, 219, 0.2)', color: '#3498db', borderRadius: 4, fontSize: 12 }}>
+                        {labelName}
+                        <button type="button" className="tag-chip-remove" style={{ border: 'none', background: 'none', color: '#3498db', cursor: 'pointer', padding: 0, fontSize: 10 }} onClick={() => setAllowedChannels(allowedChannels.filter(x => x !== chId))}>✖</button>
+                      </span>
+                    );
+                  })}
+                  {allowedChannels.length === 0 && <span style={{ opacity: 0.4, fontSize: 12 }}>Permitido en todos los canales (Por defecto)</span>}
+                </div>
+                <select
+                  value=""
+                  onChange={e => {
+                    if (e.target.value && !allowedChannels.includes(e.target.value)) {
+                      setAllowedChannels([...allowedChannels, e.target.value]);
+                    }
+                  }}
+                >
+                  <option value="">➕ Añadir canal o categoría...</option>
+                  {structure.textChannels && structure.textChannels.filter(c => !allowedChannels.includes(c.id)).length > 0 && (
+                    <optgroup label="Canales de Texto">
+                      {structure.textChannels.filter(c => !allowedChannels.includes(c.id)).map(c => (
+                        <option key={c.id} value={c.id}>#{c.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {structure.categories && structure.categories.filter(c => !allowedChannels.includes(c.id)).length > 0 && (
+                    <optgroup label="Categorías">
+                      {structure.categories.filter(c => !allowedChannels.includes(c.id)).map(c => (
+                        <option key={c.id} value={c.id}>📁 {c.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+                <span className="hint">Si seleccionas canales, el disparador SOLO funcionará en ellos o en sus categorías correspondientes.</span>
+              </div>
+
+              <div className="field split-col">
+                <label>Canales/Categorías Excluidos (Opcional)</label>
+                <div className="tag-group" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                  {ignoredChannels.map(chId => {
+                    const textCh = structure.textChannels?.find(c => c.id === chId);
+                    const catCh = structure.categories?.find(c => c.id === chId);
+                    const labelName = textCh ? `# ${textCh.name}` : catCh ? `📁 ${catCh.name}` : `ID: ${chId}`;
+                    return (
+                      <span className="tag-chip" key={chId} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', backgroundColor: 'rgba(231, 76, 60, 0.2)', color: '#e74c3c', borderRadius: 4, fontSize: 12 }}>
+                        {labelName}
+                        <button type="button" className="tag-chip-remove" style={{ border: 'none', background: 'none', color: '#e74c3c', cursor: 'pointer', padding: 0, fontSize: 10 }} onClick={() => setIgnoredChannels(ignoredChannels.filter(x => x !== chId))}>✖</button>
+                      </span>
+                    );
+                  })}
+                  {ignoredChannels.length === 0 && <span style={{ opacity: 0.4, fontSize: 12 }}>Ninguno excluido</span>}
+                </div>
+                <select
+                  value=""
+                  onChange={e => {
+                    if (e.target.value && !ignoredChannels.includes(e.target.value)) {
+                      setIgnoredChannels([...ignoredChannels, e.target.value]);
+                    }
+                  }}
+                >
+                  <option value="">➕ Añadir canal o categoría...</option>
+                  {structure.textChannels && structure.textChannels.filter(c => !ignoredChannels.includes(c.id)).length > 0 && (
+                    <optgroup label="Canales de Texto">
+                      {structure.textChannels.filter(c => !ignoredChannels.includes(c.id)).map(c => (
+                        <option key={c.id} value={c.id}>#{c.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {structure.categories && structure.categories.filter(c => !ignoredChannels.includes(c.id)).length > 0 && (
+                    <optgroup label="Categorías">
+                      {structure.categories.filter(c => !ignoredChannels.includes(c.id)).map(c => (
+                        <option key={c.id} value={c.id}>📁 {c.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                </select>
+                <span className="hint">El disparador NO funcionará en los canales o categorías listados aquí.</span>
+              </div>
+            </div>
+
             <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
               <button type="submit" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Save size={16} /> Guardar Disparador
@@ -486,6 +582,7 @@ export const CustomTriggersSettings: React.FC<CustomTriggersSettingsProps> = ({
                     <th style={{ padding: 12, color: 'var(--txt-3)' }}>Tipo</th>
                     <th style={{ padding: 12, color: 'var(--txt-3)' }}>Canal Destino</th>
                     <th style={{ padding: 12, color: 'var(--txt-3)' }}>Roles (Req / Excl)</th>
+                    <th style={{ padding: 12, color: 'var(--txt-3)' }}>Canales (Perm / Excl)</th>
                     <th style={{ padding: 12, color: 'var(--txt-3)' }}>Cooldown</th>
                     <th style={{ padding: 12, textAlign: 'right', color: 'var(--txt-3)' }}>Acciones</th>
                   </tr>
@@ -495,6 +592,9 @@ export const CustomTriggersSettings: React.FC<CustomTriggersSettingsProps> = ({
                     const requiredRole = structure.roles?.find(r => r.id === t.requiredRoleId);
                     const ignoredRole = structure.roles?.find(r => r.id === t.ignoredRoleId);
                     const targetChan = structure.textChannels?.find(c => c.id === t.targetChannelId);
+                    
+                    const allowedChansList = t.allowedChannels ? t.allowedChannels.split(',').filter(Boolean) : [];
+                    const ignoredChansList = t.ignoredChannels ? t.ignoredChannels.split(',').filter(Boolean) : [];
 
                     return (
                       <tr key={t.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
@@ -530,6 +630,23 @@ export const CustomTriggersSettings: React.FC<CustomTriggersSettingsProps> = ({
                             ) : null}
                             {!requiredRole && !ignoredRole ? (
                               <span style={{ opacity: 0.4 }}>Ninguno</span>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td style={{ padding: 12 }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            {allowedChansList.length > 0 ? (
+                              <span style={{ color: '#3498db', fontSize: 12 }}>
+                                🔵 {allowedChansList.length} Permitido(s)
+                              </span>
+                            ) : null}
+                            {ignoredChansList.length > 0 ? (
+                              <span style={{ color: '#e74c3c', fontSize: 12 }}>
+                                🔴 {ignoredChansList.length} Excluido(s)
+                              </span>
+                            ) : null}
+                            {allowedChansList.length === 0 && ignoredChansList.length === 0 ? (
+                              <span style={{ opacity: 0.4 }}>Todos</span>
                             ) : null}
                           </div>
                         </td>

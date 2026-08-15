@@ -37,6 +37,28 @@ export async function handleCustomTriggers(message: Message) {
 
   if (!matchedTrigger) return;
 
+  // Check allowed and ignored channels/categories
+  const channelId = message.channel.id;
+  const parentId = 'parentId' in message.channel ? (message.channel as any).parentId : null;
+
+  // Check allowed channels/categories if configured
+  if (matchedTrigger.allowedChannels) {
+    const allowedList = matchedTrigger.allowedChannels.split(',').map(id => id.trim()).filter(Boolean);
+    if (allowedList.length > 0) {
+      const isAllowed = allowedList.includes(channelId) || (parentId && allowedList.includes(parentId));
+      if (!isAllowed) return;
+    }
+  }
+
+  // Check ignored channels/categories if configured
+  if (matchedTrigger.ignoredChannels) {
+    const ignoredList = matchedTrigger.ignoredChannels.split(',').map(id => id.trim()).filter(Boolean);
+    if (ignoredList.length > 0) {
+      const isIgnored = ignoredList.includes(channelId) || (parentId && ignoredList.includes(parentId));
+      if (isIgnored) return;
+    }
+  }
+
   // Check role requirement if configured
   if (matchedTrigger.requiredRoleId || matchedTrigger.ignoredRoleId) {
     const member = message.member || await message.guild.members.fetch(message.author.id).catch(() => null);

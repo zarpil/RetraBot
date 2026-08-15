@@ -367,6 +367,8 @@ model CustomTrigger {
   responseType    String              @default("TEXT") // "TEXT" or "EMBED"
   requiredRoleId  String?             // Optional Discord role ID required to trigger this message
   ignoredRoleId   String?             // Optional Discord role ID excluded from triggering this message
+  allowedChannels String              @default("") // Comma-separated channel or category IDs where the command can be used
+  ignoredChannels String              @default("") // Comma-separated channel or category IDs where the command cannot be used
   targetChannelId String?             // Optional Discord channel ID where response will be sent (null = same channel)
   cooldown        Int                 @default(0) // Cooldown in seconds per user (0 = disabled)
   createdAt       DateTime            @default(now())
