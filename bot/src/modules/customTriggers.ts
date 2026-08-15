@@ -59,18 +59,26 @@ export async function handleCustomTriggers(message: Message) {
     }
   }
 
-  // Check role requirement if configured
-  if (matchedTrigger.requiredRoleId || matchedTrigger.ignoredRoleId) {
+  // Check roles if configured
+  if (matchedTrigger.requiredRoles || matchedTrigger.ignoredRoles) {
     const member = message.member || await message.guild.members.fetch(message.author.id).catch(() => null);
     
-    // Check required role
-    if (matchedTrigger.requiredRoleId && (!member || !member.roles.cache.has(matchedTrigger.requiredRoleId))) {
-      return;
+    // Check required roles (user needs at least one of them)
+    if (matchedTrigger.requiredRoles) {
+      const requiredList = matchedTrigger.requiredRoles.split(',').map(id => id.trim()).filter(Boolean);
+      if (requiredList.length > 0) {
+        const hasRequired = member && requiredList.some(rId => member.roles.cache.has(rId));
+        if (!hasRequired) return;
+      }
     }
     
-    // Check ignored/excluded role
-    if (matchedTrigger.ignoredRoleId && member && member.roles.cache.has(matchedTrigger.ignoredRoleId)) {
-      return;
+    // Check ignored/excluded roles (user cannot have any of them)
+    if (matchedTrigger.ignoredRoles) {
+      const ignoredList = matchedTrigger.ignoredRoles.split(',').map(id => id.trim()).filter(Boolean);
+      if (ignoredList.length > 0) {
+        const hasIgnored = member && ignoredList.some(rId => member.roles.cache.has(rId));
+        if (hasIgnored) return;
+      }
     }
   }
 

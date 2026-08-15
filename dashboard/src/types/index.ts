@@ -232,8 +232,8 @@ export interface CustomTrigger {
   trigger: string;
   response: string;
   responseType: string; // 'TEXT' or 'EMBED'
-  requiredRoleId?: string | null;
-  ignoredRoleId?: string | null;
+  requiredRoles?: string;
+  ignoredRoles?: string;
   allowedChannels?: string;
   ignoredChannels?: string;
   targetChannelId?: string | null;

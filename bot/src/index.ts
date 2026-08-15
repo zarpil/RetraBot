@@ -2530,7 +2530,7 @@ app.post('/api/guilds/:guildId/triggers', requireGuildAdmin, async (req, res) =>
   const { guildId } = req.params;
   if (!isValidSnowflake(guildId)) return res.status(400).json({ error: 'guildId inválido.' });
 
-  const { trigger, response, responseType, requiredRoleId, ignoredRoleId, allowedChannels, ignoredChannels, targetChannelId, cooldown } = req.body;
+  const { trigger, response, responseType, requiredRoles, ignoredRoles, allowedChannels, ignoredChannels, targetChannelId, cooldown } = req.body;
 
   if (!trigger || !response) {
     return res.status(400).json({ error: 'Trigger y response son requeridos.' });
@@ -2543,8 +2543,8 @@ app.post('/api/guilds/:guildId/triggers', requireGuildAdmin, async (req, res) =>
         trigger: trigger.trim(),
         response: response,
         responseType: responseType === 'EMBED' ? 'EMBED' : 'TEXT',
-        requiredRoleId: requiredRoleId || null,
-        ignoredRoleId: ignoredRoleId || null,
+        requiredRoles: typeof requiredRoles === 'string' ? requiredRoles : "",
+        ignoredRoles: typeof ignoredRoles === 'string' ? ignoredRoles : "",
         allowedChannels: typeof allowedChannels === 'string' ? allowedChannels : "",
         ignoredChannels: typeof ignoredChannels === 'string' ? ignoredChannels : "",
         targetChannelId: targetChannelId || null,
@@ -2562,7 +2562,7 @@ app.put('/api/guilds/:guildId/triggers/:triggerId', requireGuildAdmin, async (re
   const { guildId, triggerId } = req.params;
   if (!isValidSnowflake(guildId)) return res.status(400).json({ error: 'guildId inválido.' });
 
-  const { trigger, response, responseType, requiredRoleId, ignoredRoleId, allowedChannels, ignoredChannels, targetChannelId, cooldown } = req.body;
+  const { trigger, response, responseType, requiredRoles, ignoredRoles, allowedChannels, ignoredChannels, targetChannelId, cooldown } = req.body;
 
   try {
     const updatedTrigger = await prisma.customTrigger.update({
@@ -2571,8 +2571,8 @@ app.put('/api/guilds/:guildId/triggers/:triggerId', requireGuildAdmin, async (re
         ...(trigger && { trigger: trigger.trim() }),
         ...(response !== undefined && { response }),
         ...(responseType && { responseType: responseType === 'EMBED' ? 'EMBED' : 'TEXT' }),
-        requiredRoleId: requiredRoleId === undefined ? undefined : (requiredRoleId || null),
-        ignoredRoleId: ignoredRoleId === undefined ? undefined : (ignoredRoleId || null),
+        ...(requiredRoles !== undefined && { requiredRoles: typeof requiredRoles === 'string' ? requiredRoles : "" }),
+        ...(ignoredRoles !== undefined && { ignoredRoles: typeof ignoredRoles === 'string' ? ignoredRoles : "" }),
         ...(allowedChannels !== undefined && { allowedChannels: typeof allowedChannels === 'string' ? allowedChannels : "" }),
         ...(ignoredChannels !== undefined && { ignoredChannels: typeof ignoredChannels === 'string' ? ignoredChannels : "" }),
         targetChannelId: targetChannelId === undefined ? undefined : (targetChannelId || null),

@@ -365,8 +365,8 @@ model CustomTrigger {
   trigger         String              // The keyword or command that triggers the bot (e.g., "!hello")
   response        String              // Plain text response or JSON for embeds
   responseType    String              @default("TEXT") // "TEXT" or "EMBED"
-  requiredRoleId  String?             // Optional Discord role ID required to trigger this message
-  ignoredRoleId   String?             // Optional Discord role ID excluded from triggering this message
+  requiredRoles   String              @default("") // Comma-separated Discord role IDs required to trigger this message (user needs at least one)
+  ignoredRoles    String              @default("") // Comma-separated Discord role IDs excluded from triggering this message (user cannot have any of these)
   allowedChannels String              @default("") // Comma-separated channel or category IDs where the command can be used
   ignoredChannels String              @default("") // Comma-separated channel or category IDs where the command cannot be used
   targetChannelId String?             // Optional Discord channel ID where response will be sent (null = same channel)

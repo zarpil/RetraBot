@@ -25,8 +25,8 @@ export const CustomTriggersSettings: React.FC<CustomTriggersSettingsProps> = ({
   const [triggerKeyword, setTriggerKeyword] = useState('');
   const [responseType, setResponseType] = useState<'TEXT' | 'EMBED'>('TEXT');
   const [cooldown, setCooldown] = useState(0);
-  const [requiredRoleId, setRequiredRoleId] = useState('');
-  const [ignoredRoleId, setIgnoredRoleId] = useState('');
+  const [requiredRoles, setRequiredRoles] = useState<string[]>([]);
+  const [ignoredRoles, setIgnoredRoles] = useState<string[]>([]);
   const [allowedChannels, setAllowedChannels] = useState<string[]>([]);
   const [ignoredChannels, setIgnoredChannels] = useState<string[]>([]);
   const [targetChannelId, setTargetChannelId] = useState('');
@@ -69,8 +69,8 @@ export const CustomTriggersSettings: React.FC<CustomTriggersSettingsProps> = ({
     setResponseType('TEXT');
     setTextResponse('');
     setCooldown(0);
-    setRequiredRoleId('');
-    setIgnoredRoleId('');
+    setRequiredRoles([]);
+    setIgnoredRoles([]);
     setAllowedChannels([]);
     setIgnoredChannels([]);
     setTargetChannelId('');
@@ -89,8 +89,8 @@ export const CustomTriggersSettings: React.FC<CustomTriggersSettingsProps> = ({
     setTriggerKeyword(t.trigger);
     setResponseType(t.responseType as 'TEXT' | 'EMBED');
     setCooldown(t.cooldown);
-    setRequiredRoleId(t.requiredRoleId || '');
-    setIgnoredRoleId(t.ignoredRoleId || '');
+    setRequiredRoles(t.requiredRoles ? t.requiredRoles.split(',').map(x => x.trim()).filter(Boolean) : []);
+    setIgnoredRoles(t.ignoredRoles ? t.ignoredRoles.split(',').map(x => x.trim()).filter(Boolean) : []);
     setAllowedChannels(t.allowedChannels ? t.allowedChannels.split(',').map(x => x.trim()).filter(Boolean) : []);
     setIgnoredChannels(t.ignoredChannels ? t.ignoredChannels.split(',').map(x => x.trim()).filter(Boolean) : []);
     setTargetChannelId(t.targetChannelId || '');
@@ -181,8 +181,8 @@ export const CustomTriggersSettings: React.FC<CustomTriggersSettingsProps> = ({
       trigger: triggerKeyword.trim(),
       response: finalResponse,
       responseType,
-      requiredRoleId: requiredRoleId || null,
-      ignoredRoleId: ignoredRoleId || null,
+      requiredRoles: requiredRoles.join(','),
+      ignoredRoles: ignoredRoles.join(','),
       allowedChannels: allowedChannels.join(','),
       ignoredChannels: ignoredChannels.join(','),
       targetChannelId: targetChannelId || null,
@@ -427,31 +427,65 @@ export const CustomTriggersSettings: React.FC<CustomTriggersSettingsProps> = ({
 
             <div className="split-row" style={{ gap: 20 }}>
               <div className="field split-col">
-                <label>Rol Requerido (Opcional)</label>
+                <label>Roles Requeridos (Opcional)</label>
+                <div className="tag-group" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                  {requiredRoles.map(rId => {
+                    const roleObj = structure.roles?.find(r => r.id === rId);
+                    const labelName = roleObj ? `@${roleObj.name}` : `Rol: ${rId}`;
+                    return (
+                      <span className="tag-chip" key={rId} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', backgroundColor: roleObj?.color ? `${roleObj.color}15` : 'rgba(255,255,255,0.1)', color: roleObj?.color || '#fff', borderRadius: 4, fontSize: 12 }}>
+                        {labelName}
+                        <button type="button" className="tag-chip-remove" style={{ border: 'none', background: 'none', color: roleObj?.color || '#fff', cursor: 'pointer', padding: 0, fontSize: 10 }} onClick={() => setRequiredRoles(requiredRoles.filter(x => x !== rId))}>✖</button>
+                      </span>
+                    );
+                  })}
+                  {requiredRoles.length === 0 && <span style={{ opacity: 0.4, fontSize: 12 }}>Cualquier usuario (Sin restricción)</span>}
+                </div>
                 <select
-                  value={requiredRoleId}
-                  onChange={e => setRequiredRoleId(e.target.value)}
+                  value=""
+                  onChange={e => {
+                    if (e.target.value && !requiredRoles.includes(e.target.value)) {
+                      setRequiredRoles([...requiredRoles, e.target.value]);
+                    }
+                  }}
                 >
-                  <option value="">Cualquier usuario (Sin restricción)</option>
-                  {structure.roles && structure.roles.map(r => (
+                  <option value="">➕ Añadir rol requerido...</option>
+                  {structure.roles && structure.roles.filter(r => !requiredRoles.includes(r.id)).map(r => (
                     <option key={r.id} value={r.id}>@{r.name}</option>
                   ))}
                 </select>
-                <span className="hint">Solo los miembros con este rol podrán usar el disparador.</span>
+                <span className="hint">Solo los usuarios que tengan AL MENOS uno de estos roles podrán usar el disparador.</span>
               </div>
 
               <div className="field split-col">
-                <label>Rol Excluido (Opcional)</label>
+                <label>Roles Excluidos (Opcional)</label>
+                <div className="tag-group" style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                  {ignoredRoles.map(rId => {
+                    const roleObj = structure.roles?.find(r => r.id === rId);
+                    const labelName = roleObj ? `@${roleObj.name}` : `Rol: ${rId}`;
+                    return (
+                      <span className="tag-chip" key={rId} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px', backgroundColor: 'rgba(231, 76, 60, 0.2)', color: '#e74c3c', borderRadius: 4, fontSize: 12 }}>
+                        {labelName}
+                        <button type="button" className="tag-chip-remove" style={{ border: 'none', background: 'none', color: '#e74c3c', cursor: 'pointer', padding: 0, fontSize: 10 }} onClick={() => setIgnoredRoles(ignoredRoles.filter(x => x !== rId))}>✖</button>
+                      </span>
+                    );
+                  })}
+                  {ignoredRoles.length === 0 && <span style={{ opacity: 0.4, fontSize: 12 }}>Ninguno excluido</span>}
+                </div>
                 <select
-                  value={ignoredRoleId}
-                  onChange={e => setIgnoredRoleId(e.target.value)}
+                  value=""
+                  onChange={e => {
+                    if (e.target.value && !ignoredRoles.includes(e.target.value)) {
+                      setIgnoredRoles([...ignoredRoles, e.target.value]);
+                    }
+                  }}
                 >
-                  <option value="">Ninguno (Sin excluir roles)</option>
-                  {structure.roles && structure.roles.map(r => (
+                  <option value="">➕ Añadir rol a excluir...</option>
+                  {structure.roles && structure.roles.filter(r => !ignoredRoles.includes(r.id)).map(r => (
                     <option key={r.id} value={r.id}>@{r.name}</option>
                   ))}
                 </select>
-                <span className="hint">Los miembros con este rol NO podrán usar el disparador.</span>
+                <span className="hint">Los usuarios con cualquiera de estos roles NO podrán usar el disparador.</span>
               </div>
             </div>
 
@@ -589,8 +623,8 @@ export const CustomTriggersSettings: React.FC<CustomTriggersSettingsProps> = ({
                 </thead>
                 <tbody>
                   {triggers.map(t => {
-                    const requiredRole = structure.roles?.find(r => r.id === t.requiredRoleId);
-                    const ignoredRole = structure.roles?.find(r => r.id === t.ignoredRoleId);
+                    const requiredRolesList = t.requiredRoles ? t.requiredRoles.split(',').filter(Boolean) : [];
+                    const ignoredRolesList = t.ignoredRoles ? t.ignoredRoles.split(',').filter(Boolean) : [];
                     const targetChan = structure.textChannels?.find(c => c.id === t.targetChannelId);
                     
                     const allowedChansList = t.allowedChannels ? t.allowedChannels.split(',').filter(Boolean) : [];
@@ -618,17 +652,17 @@ export const CustomTriggersSettings: React.FC<CustomTriggersSettingsProps> = ({
                         </td>
                         <td style={{ padding: 12 }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                            {requiredRole ? (
-                              <span style={{ color: requiredRole.color || '#fff', fontSize: 12 }}>
-                                🟢 Req: <strong>@{requiredRole.name}</strong>
+                            {requiredRolesList.length > 0 ? (
+                              <span style={{ color: '#2ecc71', fontSize: 12 }}>
+                                🟢 {requiredRolesList.length} Requerido(s)
                               </span>
                             ) : null}
-                            {ignoredRole ? (
+                            {ignoredRolesList.length > 0 ? (
                               <span style={{ color: '#e74c3c', fontSize: 12 }}>
-                                🔴 Excl: <strong>@{ignoredRole.name}</strong>
+                                🔴 {ignoredRolesList.length} Excluido(s)
                               </span>
                             ) : null}
-                            {!requiredRole && !ignoredRole ? (
+                            {requiredRolesList.length === 0 && ignoredRolesList.length === 0 ? (
                               <span style={{ opacity: 0.4 }}>Ninguno</span>
                             ) : null}
                           </div>
