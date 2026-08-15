@@ -8,7 +8,8 @@ import {
   Users,
   Cake,
   Settings,
-  ChevronRight
+  ChevronRight,
+  MessageSquare
 } from 'lucide-react';
 import type { Tab, Guild, ServerStats } from '../types';
 
@@ -67,6 +68,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           ['casino', 'Casino & Economía', <Coins size={14} />],
           ['leaderboard', 'Clasificación', <Users size={14} />],
           ['birthdays', 'Cumpleaños', <Cake size={14} />],
+          ['triggers', 'Mensajes Auto', <MessageSquare size={14} />],
         ] as [Tab, string, React.ReactNode][]).map(([id, label, icon]) => (
           <div
             key={id}

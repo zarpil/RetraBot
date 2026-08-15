@@ -35,6 +35,7 @@ import { BirthdaysSettings } from './pages/BirthdaysSettings';
 import { LeaderboardPage } from './pages/LeaderboardPage';
 import { ClansPage } from './pages/ClansPage';
 import { CasinoPage } from './pages/CasinoPage';
+import { CustomTriggersSettings } from './pages/CustomTriggersSettings';
 
 const rawApiBase = import.meta.env.VITE_API_URL || '';
 const API_BASE = rawApiBase ? rawApiBase.replace(/\/$/, '') : '';
@@ -961,6 +962,16 @@ export default function App() {
             setSeasonalEdits={setSeasonalEdits}
             resetConfirmed={resetConfirmed}
             setResetConfirmed={setResetConfirmed}
+          />
+        )}
+
+        {tab === 'triggers' && (
+          <CustomTriggersSettings
+            selectedGuild={selectedGuild}
+            structure={structure}
+            authFetch={authFetch}
+            API_BASE={API_BASE}
+            triggerToast={triggerToast}
           />
         )}
       </div>

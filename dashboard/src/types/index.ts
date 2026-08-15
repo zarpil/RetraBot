@@ -226,5 +226,18 @@ export interface ServerStructure {
   roles: { id: string; name: string; color: string }[];
 }
 
-export type Tab = 'dashboard' | 'general' | 'leveling' | 'tempvc' | 'clans' | 'casino' | 'leaderboard' | 'birthdays';
+export interface CustomTrigger {
+  id: string;
+  guildId: string;
+  trigger: string;
+  response: string;
+  responseType: string; // 'TEXT' or 'EMBED'
+  requiredRoleId?: string | null;
+  targetChannelId?: string | null;
+  cooldown: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type Tab = 'dashboard' | 'general' | 'leveling' | 'tempvc' | 'clans' | 'casino' | 'leaderboard' | 'birthdays' | 'triggers';
 export type CasinoSubTab = 'general' | 'work' | 'crime' | 'slut' | 'rob' | 'chicken' | 'shop' | 'income' | 'reset';

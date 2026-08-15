@@ -54,12 +54,11 @@ import {
   handleGalloInteraction,
   buildGallineroHub
 } from './modules/economy';
-
 import { processMonthlyServerTasks, startMonthlyScheduler } from './modules/monthlyReset';
 import { startBirthdayScheduler, checkBirthdays } from './modules/birthdays';
+import { setCustomTriggersClient, handleCustomTriggers } from './modules/customTriggers';
 
 dotenv.config();
-
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -75,6 +74,7 @@ client.on(Events.ClientReady, async (c) => {
   console.log(`🤖 Bot listo y conectado como: ${c.user.tag}`);
   setEconomyClient(c);
   setClansClient(c);
+  setCustomTriggersClient(c);
 
   // Start background monthly scheduler & run check
   startMonthlyScheduler(c);
@@ -327,6 +327,7 @@ client.on(Events.MessageCreate, async (message) => {
   await handleMessageXP(message);
   await handlePrefixEconomyCommands(message);
   await handleClanCommand(message);
+  await handleCustomTriggers(message);
 });
 
 // Voice State Listener (VC XP, Temp VC & Clan VC Anti-AFK)
@@ -2502,6 +2503,93 @@ app.get('/api/guilds/:guildId/clans', requireGuildAdmin, async (req, res) => {
     res.status(500).json({ error: 'Error al obtener la lista de clanes.' });
   }
 });
+
+// ── CUSTOM TRIGGERS API ENDPOINTS ──
+app.get('/api/guilds/:guildId/triggers', requireGuildAdmin, async (req, res) => {
+  const { guildId } = req.params;
+  if (!isValidSnowflake(guildId)) return res.status(400).json({ error: 'guildId inválido.' });
+
+  try {
+    const triggers = await prisma.customTrigger.findMany({
+      where: { guildId },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json(triggers);
+  } catch (error) {
+    console.error('Error al obtener disparadores:', error);
+    res.status(500).json({ error: 'Error al obtener los disparadores.' });
+  }
+});
+
+app.post('/api/guilds/:guildId/triggers', requireGuildAdmin, async (req, res) => {
+  const { guildId } = req.params;
+  if (!isValidSnowflake(guildId)) return res.status(400).json({ error: 'guildId inválido.' });
+
+  const { trigger, response, responseType, requiredRoleId, targetChannelId, cooldown } = req.body;
+
+  if (!trigger || !response) {
+    return res.status(400).json({ error: 'Trigger y response son requeridos.' });
+  }
+
+  try {
+    const newTrigger = await prisma.customTrigger.create({
+      data: {
+        guildId,
+        trigger: trigger.trim(),
+        response: response,
+        responseType: responseType === 'EMBED' ? 'EMBED' : 'TEXT',
+        requiredRoleId: requiredRoleId || null,
+        targetChannelId: targetChannelId || null,
+        cooldown: typeof cooldown === 'number' ? Math.max(0, cooldown) : 0,
+      },
+    });
+    res.json({ success: true, trigger: newTrigger });
+  } catch (error) {
+    console.error('Error al crear disparador:', error);
+    res.status(500).json({ error: 'Error al crear el disparador.' });
+  }
+});
+
+app.put('/api/guilds/:guildId/triggers/:triggerId', requireGuildAdmin, async (req, res) => {
+  const { guildId, triggerId } = req.params;
+  if (!isValidSnowflake(guildId)) return res.status(400).json({ error: 'guildId inválido.' });
+
+  const { trigger, response, responseType, requiredRoleId, targetChannelId, cooldown } = req.body;
+
+  try {
+    const updatedTrigger = await prisma.customTrigger.update({
+      where: { id: triggerId },
+      data: {
+        ...(trigger && { trigger: trigger.trim() }),
+        ...(response !== undefined && { response }),
+        ...(responseType && { responseType: responseType === 'EMBED' ? 'EMBED' : 'TEXT' }),
+        requiredRoleId: requiredRoleId === undefined ? undefined : (requiredRoleId || null),
+        targetChannelId: targetChannelId === undefined ? undefined : (targetChannelId || null),
+        ...(typeof cooldown === 'number' && { cooldown: Math.max(0, cooldown) }),
+      },
+    });
+    res.json({ success: true, trigger: updatedTrigger });
+  } catch (error) {
+    console.error('Error al actualizar disparador:', error);
+    res.status(500).json({ error: 'Error al actualizar el disparador.' });
+  }
+});
+
+app.delete('/api/guilds/:guildId/triggers/:triggerId', requireGuildAdmin, async (req, res) => {
+  const { guildId, triggerId } = req.params;
+  if (!isValidSnowflake(guildId)) return res.status(400).json({ error: 'guildId inválido.' });
+
+  try {
+    await prisma.customTrigger.delete({
+      where: { id: triggerId },
+    });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error al eliminar disparador:', error);
+    res.status(500).json({ error: 'Error al eliminar el disparador.' });
+  }
+});
+
 
 // Fast member search endpoint for large servers (+50k members)
 // CVE-4: auth required

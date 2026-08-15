@@ -358,3 +358,19 @@ model UserBirthday {
   @@index([guildId, userId])
 }
 
+// ── CUSTOM TRIGGERS SYSTEM ────────────────────────────────────────────────
+model CustomTrigger {
+  id              String              @id @default(uuid())
+  guildId         String
+  trigger         String              // The keyword or command that triggers the bot (e.g., "!hello")
+  response        String              // Plain text response or JSON for embeds
+  responseType    String              @default("TEXT") // "TEXT" or "EMBED"
+  requiredRoleId  String?             // Optional Discord role ID required to trigger this message
+  targetChannelId String?             // Optional Discord channel ID where response will be sent (null = same channel)
+  cooldown        Int                 @default(0) // Cooldown in seconds per user (0 = disabled)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([guildId])
+}
+
